@@ -1,0 +1,26 @@
+{
+  "name": "@kzay/hermes-board-skills",
+  "version": "3.0.0",
+  "description": "Cursor IDE skills for interacting with the Hermes Board MCP Server",
+  "scripts": {
+    "postinstall": "node postinstall.js"
+  },
+  "keywords": [
+    "cursor",
+    "skills",
+    "hermes",
+    "kanban",
+    "openspec",
+    "board",
+    "mcp"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hermes-agents/hermes-board-mcp.git",
+    "directory": "client"
+  }
+}

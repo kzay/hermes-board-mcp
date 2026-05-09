@@ -1,0 +1,109 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://hermes-agent.nousresearch.com/schemas/hermes-board.json",
+  "title": "hermes-board.json",
+  "description": "Project-level configuration for hermes-board-mcp client skills",
+  "type": "object",
+  "required": ["config_version"],
+  "properties": {
+    "config_version": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1,
+      "description": "Schema version for future migrations"
+    },
+    "$schema": {
+      "type": "string",
+      "description": "URL of this JSON schema for editor completions"
+    },
+    "server": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "MCP server URL (e.g. https://hermes-board-mcp.example.com/mcp)"
+        },
+        "profile": {
+          "type": "string",
+          "description": "Default MCP profile (e.g. orchestrator, planner)"
+        }
+      }
+    },
+    "project": {
+      "type": "object",
+      "properties": {
+        "slug": {
+          "type": "string",
+          "description": "Project slug used for OpenSpec root resolution"
+        },
+        "board": {
+          "type": "string",
+          "description": "Default kanban board slug (same as project slug in most cases)"
+        }
+      }
+    },
+    "repo": {
+      "type": "object",
+      "description": "Git repository metadata for portable worker dispatch",
+      "properties": {
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Canonical public Git URL (e.g. https://github.com/user/repo.git)"
+        },
+        "aliases": {
+          "type": "array",
+          "items": { "type": "string", "format": "uri" },
+          "description": "Additional clone URLs for matching (e.g. SSH alternate)",
+          "default": []
+        },
+        "default_branch": {
+          "type": "string",
+          "description": "Default branch for workers to check out (e.g. main, master)",
+          "default": "main"
+        }
+      }
+    },
+    "defaults": {
+      "type": "object",
+      "description": "Default values passed to kanban_create when not overridden by the skill",
+      "properties": {
+        "assignee": {
+          "type": "string"
+        },
+        "workspace": {
+          "type": "string",
+          "enum": ["scratch", "worktree"]
+        },
+        "max_runtime": {
+          "type": "string",
+          "description": "Max task runtime, e.g. 30m, 2h, 1d"
+        },
+        "skills": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": []
+        },
+        "tenant": {
+          "type": ["string", "null"]
+        },
+        "priority": {
+          "type": ["number", "null"],
+          "description": "Task priority (integer)"
+        }
+      }
+    },
+    "openspec": {
+      "type": "object",
+      "properties": {
+        "root": {
+          "type": "string",
+          "description": "Relative path to openspec root from repo root",
+          "default": "openspec/"
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,3 +1,9 @@
+# AI harness configs
+.claude/
+.codex/
+.cursor/
+openspec/
+
 # Dependencies
 node_modules/
 package-lock.json

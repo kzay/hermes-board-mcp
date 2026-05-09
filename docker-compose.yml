@@ -1,0 +1,21 @@
+services:
+  hermes-board-mcp:
+    build: .
+    container_name: hermes-board-mcp
+    restart: unless-stopped
+    ports:
+      - "7332:7332"
+    environment:
+      - PORT=7332
+      - BOARD_MCP_TOKENS=${BOARD_MCP_TOKENS:-}
+      - BOARD_MCP_POLICY=/app/policy.yaml
+    volumes:
+      - /root/.hermes/kanban:/root/.hermes/kanban:ro
+      - /root/.hermes/factory:/root/.hermes/factory:rw
+      - /opt/hermes/projects:/opt/hermes/projects:ro
+    networks:
+      - hermes
+
+networks:
+  hermes:
+    external: true

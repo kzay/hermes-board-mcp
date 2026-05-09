@@ -1,0 +1,30 @@
+{
+  "config_version": 1,
+  "$schema": "https://hermes-agent.nousresearch.com/schemas/hermes-board.json",
+  "server": {
+    "url": "https://hermes-board-mcp.example.com/mcp",
+    "profile": "orchestrator"
+  },
+  "project": {
+    "slug": "YOUR_PROJECT_SLUG",
+    "board": "YOUR_PROJECT_SLUG"
+  },
+  "repo": {
+    "url": "https://github.com/YOU/YOUR_REPO.git",
+    "aliases": [
+      "git@github.com:YOU/YOUR_REPO.git"
+    ],
+    "default_branch": "main"
+  },
+  "defaults": {
+    "assignee": "builder",
+    "workspace": "worktree",
+    "max_runtime": "2h",
+    "skills": [],
+    "tenant": null,
+    "priority": null
+  },
+  "openspec": {
+    "root": "openspec/"
+  }
+}

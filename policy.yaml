@@ -1,0 +1,94 @@
+# hermes-board-mcp v2 tool access policy
+# Profile → list of allowed tools
+# Profiles not listed here are denied all access (default-deny).
+
+profiles:
+  planner:
+    tools:
+      - kanban_boards_list
+      - kanban_list
+      - kanban_show
+      - kanban_create
+      - kanban_complete
+      - kanban_block
+      - kanban_unblock
+      - kanban_archive
+      - kanban_assign
+      - kanban_comment
+      - kanban_link
+      - kanban_unlink
+      - kanban_specify
+      - kanban_dispatch
+      - kanban_runs
+      - kanban_stats
+      - kanban_tail
+      - kanban_create_board
+      - kanban_create_from_openspec
+      - openspec_validate
+      - openspec_status
+      - openspec_list
+      - openspec_push
+
+  orchestrator:
+    tools:
+      - kanban_boards_list
+      - kanban_list
+      - kanban_show
+      - kanban_create
+      - kanban_complete
+      - kanban_block
+      - kanban_unblock
+      - kanban_archive
+      - kanban_assign
+      - kanban_comment
+      - kanban_link
+      - kanban_unlink
+      - kanban_specify
+      - kanban_dispatch
+      - kanban_runs
+      - kanban_stats
+      - kanban_tail
+      - kanban_create_board
+      - kanban_create_from_openspec
+      - openspec_validate
+      - openspec_status
+      - openspec_list
+      - openspec_push
+
+  builder:
+    tools:
+      - kanban_boards_list
+      - kanban_list
+      - kanban_show
+      - kanban_comment
+      - kanban_runs
+      - kanban_stats
+      - kanban_heartbeat
+
+  reviewer:
+    tools:
+      - kanban_boards_list
+      - kanban_list
+      - kanban_show
+      - kanban_runs
+      - kanban_stats
+      - kanban_tail
+
+  release:
+    tools:
+      - kanban_boards_list
+      - kanban_list
+      - kanban_show
+      - kanban_complete
+      - kanban_archive
+      - kanban_runs
+      - kanban_stats
+      - openspec_validate
+      - openspec_status
+      - openspec_list
+
+  default:
+    tools:
+      - kanban_boards_list
+      - kanban_list
+      - kanban_show

@@ -1,0 +1,12 @@
+test/
+dist/test
+dist/**/*.test.*
+client/
+docker-compose.yml
+Dockerfile
+hermes-board-mcp.service
+.env
+*.log
+src/
+tsconfig.json
+*.tsbuildinfo

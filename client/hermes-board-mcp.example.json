@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "hermes-board-mcp": {
+      "url": "https://hermes-board-mcp.YOUR_DOMAIN/mcp",
+      "headers": {
+        "Authorization": "Bearer ${BOARD_MCP_TOKEN}",
+        "X-Hermes-Profile": "orchestrator"
+      }
+    }
+  }
+}
