@@ -1,6 +1,6 @@
 # Changelog
 
-## 3.3.0 - Skill packaging hardening
+## 3.3.1 - Skill packaging hardening
 
 - Added skill frontmatter routing metadata for all canonical `hb-*` skills.
 - Added provider references under `hb-deploy/references/providers/`.

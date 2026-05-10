@@ -1,6 +1,6 @@
 {
   "name": "@kzay/hermes-board-skills",
-  "version": "3.3.0",
+  "version": "3.3.1",
   "description": "Canonical hb-* Cursor IDE skills for interacting with the Hermes Board MCP Server",
   "bin": {
     "hermes-board-skills-setup": "postinstall.js"
