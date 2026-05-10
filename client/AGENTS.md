@@ -21,6 +21,7 @@ Verify the canonical skills were copied:
 
 ```bash
 ls .cursor/skills/board/hb-deploy/SKILL.md
+ls .cursor/skills/board/hb-deploy/references/providers/openspec.md
 ls .cursor/skills/board/hb-monitor/SKILL.md
 ls .cursor/skills/board/hb-plan/SKILL.md
 ls .cursor/skills/board/hb-worker/SKILL.md
@@ -30,7 +31,7 @@ ls .cursor/skills/board/hb-release/SKILL.md
 If the files are missing, run the postinstall manually:
 
 ```bash
-node node_modules/@kzay/hermes-board-skills/postinstall.js
+npx hermes-board-skills-setup
 ```
 
 ## Configure
@@ -87,6 +88,7 @@ If you get connection refused, the server is not running or the URL is wrong.
 ## Skill Selection
 
 - Use `hb-deploy` for provider-backed spec dispatch through `hb_import_spec`.
+  - For `openspec:` refs, read `hb-deploy/references/providers/openspec.md` before deriving or validating the change.
 - Use `hb-monitor` for board summaries and follow workflows.
 - Use `hb-plan` for task creation, assignment, links, specify, and dispatch.
 - Use `hb-worker` for comments, blockers, unblock, heartbeat, and worker completion.
@@ -98,6 +100,6 @@ If you get connection refused, the server is not running or the URL is wrong.
 |---------|-------|-----|
 | `401 Unauthorized` | Token mismatch | Verify `BOARD_MCP_TOKEN` matches a token in `BOARD_MCP_TOKENS` |
 | `Connection refused` | Server not running or wrong URL | Verify `/health` returns 200 |
-| Skills not in Cursor | postinstall did not run | Run the package postinstall manually |
+| Skills not in Cursor | postinstall did not run | Run `npx hermes-board-skills-setup` |
 | `ENOTFOUND` | Wrong domain in `.cursor/mcp.json` | Check the URL matches the VPS domain |
 | MCP tools not listed | `.cursor/mcp.json` missing or malformed | Re-copy the example config and merge carefully |

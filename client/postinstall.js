@@ -4,13 +4,14 @@
  * Also scaffolds hermes-board.json if absent.
  * Existing files are never overwritten.
  */
-import { copyFileSync, existsSync, mkdirSync, statSync, writeFileSync } from 'fs';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join, resolve } from 'path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const TARGET_BASE = resolve(process.cwd(), '.cursor', 'skills', 'board');
-const BOARD_CONFIG_PATH = resolve(process.cwd(), 'hermes-board.json');
+const INSTALL_ROOT = resolve(process.env.INIT_CWD || process.cwd());
+const TARGET_BASE = resolve(INSTALL_ROOT, '.cursor', 'skills', 'board');
+const BOARD_CONFIG_PATH = resolve(INSTALL_ROOT, 'hermes-board.json');
 
 const CANONICAL_SKILLS = [
   'hb-deploy',
@@ -51,23 +52,39 @@ const BOARD_CONFIG_PLACEHOLDER = JSON.stringify({
   },
 }, null, 2);
 
+function copyMissingTree(srcDir, destDir) {
+  mkdirSync(destDir, { recursive: true });
+
+  for (const entry of readdirSync(srcDir, { withFileTypes: true })) {
+    const srcPath = join(srcDir, entry.name);
+    const destPath = join(destDir, entry.name);
+
+    if (entry.isDirectory()) {
+      copyMissingTree(srcPath, destPath);
+      continue;
+    }
+
+    if (!entry.isFile()) continue;
+
+    if (!existsSync(destPath)) {
+      copyFileSync(srcPath, destPath);
+      console.log(`  copied: ${destPath}`);
+    } else {
+      console.log(`  exists: ${destPath} (skipped)`);
+    }
+  }
+}
+
 function copySkill(skillName) {
   const srcDir = join(__dirname, 'skills', skillName);
   const srcPath = join(srcDir, 'SKILL.md');
   const destDir = join(TARGET_BASE, skillName);
-  const destPath = join(destDir, 'SKILL.md');
 
   if (!existsSync(srcPath) || !statSync(srcPath).isFile()) {
     throw new Error(`missing canonical skill file: ${srcPath}`);
   }
 
-  mkdirSync(destDir, { recursive: true });
-  if (!existsSync(destPath)) {
-    copyFileSync(srcPath, destPath);
-    console.log(`  copied: ${destPath}`);
-  } else {
-    console.log(`  exists: ${destPath} (skipped)`);
-  }
+  copyMissingTree(srcDir, destDir);
 }
 
 try {

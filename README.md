@@ -1,4 +1,4 @@
-# hermes-board-mcp v3.2
+# hermes-board-mcp v3.3
 
 Standalone MCP server exposing kanban and provider-backed spec import tools for the Hermes board system. Agents and Cursor IDE instances connect to this server to list boards, create tasks, dispatch spec work, and monitor worker progress via the Model Context Protocol over HTTP.
 
@@ -10,7 +10,7 @@ Standalone MCP server exposing kanban and provider-backed spec import tools for 
 - `hb_health` for MCP-level setup verification.
 - `hb_send_heartbeat` for long-running worker liveness.
 - `repo` metadata in `hermes-board.json` for portable committed-ref dispatch.
-- Server package and client skills package are released together as `3.2.0`.
+- Server package and client skills package are released together as `3.3.0`.
 
 ## Quickstart
 
@@ -206,6 +206,12 @@ systemctl enable --now hermes-board-mcp
 journalctl -u hermes-board-mcp -f
 ```
 
+For a global npm install, the packaged service file can also be copied from the package directory:
+
+```bash
+cp $(npm root -g)/@kzay/hermes-board-mcp/hermes-board-mcp.service /etc/systemd/system/
+```
+
 ## Caddy / TLS
 
 ```caddyfile
@@ -228,7 +234,7 @@ curl https://hermes-board-mcp.example.com/health
 npm run release:check
 ```
 
-This runs the TypeScript build, stale-name checks for release-facing files, and a client package dry run that verifies the canonical skill set.
+This runs the TypeScript build, stale-name checks for release-facing files, client skill quality checks, and package dry runs that verify required production files.
 
 ## Related
 

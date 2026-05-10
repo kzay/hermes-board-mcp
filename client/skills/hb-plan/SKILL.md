@@ -1,3 +1,8 @@
+---
+name: hb-plan
+description: Load when the user wants to create, organize, assign, link, specify, triage, or dispatch normal Hermes Kanban tasks rather than importing a provider-backed spec.
+---
+
 # Hermes Board Plan
 
 Create and organize Hermes Kanban work from a project repo.
@@ -24,6 +29,7 @@ Use when the user wants to create board tasks, triage work, assign owners, link 
 - Do not create large batches without confirming the intended board and scope.
 - Do not use task creation as a substitute for `hb_import_spec` when the user is dispatching a provider-backed spec.
 - Do not push, publish, merge, or change remote resources unless the user explicitly approves.
+- Do not complete or archive release work from this skill.
 
 ## Tool Ownership
 

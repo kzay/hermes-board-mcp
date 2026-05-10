@@ -1,3 +1,8 @@
+---
+name: hb-worker
+description: Load when the agent is acting on an assigned Hermes task and must inspect work, leave progress comments, report blockers, send heartbeats, unblock, or complete verified worker work.
+---
+
 # Hermes Board Worker
 
 Report worker progress, blockers, and liveness while completing Hermes Kanban tasks.
@@ -21,6 +26,7 @@ Use when the agent is acting as a worker on a Hermes task, needs to leave progre
 - Do not claim running state manually; dispatch owns worker lifecycle.
 - Do not mark work complete without verification evidence.
 - Do not archive tasks from this skill; use `hb-release` for release/archive workflows.
+- Do not use worker comments as a substitute for blocking when work cannot continue.
 
 ## Tool Ownership
 

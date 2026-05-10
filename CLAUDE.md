@@ -34,9 +34,9 @@ This project implements:
 - **Project routing**: `resolveProject` and `resolveProjectByRepo` map project/repo slugs to board metadata (including `repo_url`, `repo_aliases`, `default_branch`)
 - **Spec Provider Registry**: Pluggable `SpecProvider` interface in `src/spec-providers/`. Providers are selected by `spec_ref` prefix (e.g. `openspec:`, `speckit:`). Each provider implements `canResolve(specRef)` and `buildBody(specRef, opts)` to produce a task body with Git context and derived `spec_path`.
 - **Committed-ref dispatch**: `hb_import_spec` requires `base_commit`, resolves the provider from `spec_ref`, and embeds portable Git checkout instructions in task bodies (defaults `workspace` to `scratch`)
-- **Client skill release surface**: `client/` publishes canonical `hb-*` skills (`hb-deploy`, `hb-monitor`, `hb-plan`, `hb-worker`, `hb-release`) plus a tool coverage matrix.
-- **Release checks**: `npm run release:check` verifies stale release-facing tool names and client package contents before publish.
-- **Version alignment**: Server and client packages ship together as `3.2.0`.
+- **Client skill release surface**: `client/` publishes canonical `hb-*` skills (`hb-deploy`, `hb-monitor`, `hb-plan`, `hb-worker`, `hb-release`) plus provider references, routing evals, and a tool coverage matrix.
+- **Release checks**: `npm run release:check` verifies stale release-facing tool names, client skill quality, docs drift, and package contents before publish.
+- **Version alignment**: Server and client packages ship together as `3.3.0`.
 
 ## OpenSpec Integration
 

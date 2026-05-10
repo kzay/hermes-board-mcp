@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "name": "deploy-openspec-change",
+      "user_request": "Deploy this OpenSpec change to Hermes workers.",
+      "expected_skill": "hb-deploy",
+      "should_not_load": ["hb-monitor", "hb-plan", "hb-worker", "hb-release"],
+      "expected_provider_reference": "hb-deploy/references/providers/openspec.md"
+    },
+    {
+      "name": "dispatch-provider-ref",
+      "user_request": "Dispatch openspec:add-auth to the board.",
+      "expected_skill": "hb-deploy",
+      "should_not_load": ["hb-monitor", "hb-plan"],
+      "expected_provider_reference": "hb-deploy/references/providers/openspec.md"
+    },
+    {
+      "name": "unsupported-provider",
+      "user_request": "Dispatch unknown:feature-42 to Hermes.",
+      "expected_skill": "hb-deploy",
+      "should_stop_before_tool": "hb_import_spec",
+      "expected_outcome": "Report supported release provider prefixes without creating a task."
+    },
+    {
+      "name": "monitor-provider-work",
+      "user_request": "Follow openspec:add-auth until the workers finish.",
+      "expected_skill": "hb-monitor",
+      "should_not_load": ["hb-deploy", "hb-worker"]
+    },
+    {
+      "name": "plan-board-tasks",
+      "user_request": "Create a few board tasks for this refactor and link the dependency order.",
+      "expected_skill": "hb-plan",
+      "should_not_load": ["hb-deploy", "hb-release"]
+    },
+    {
+      "name": "worker-progress",
+      "user_request": "I am working task HB-123 and need to report progress and send a heartbeat.",
+      "expected_skill": "hb-worker",
+      "should_not_load": ["hb-monitor", "hb-release"]
+    },
+    {
+      "name": "release-complete-archive",
+      "user_request": "Run release checks, mark verified tasks complete, and archive finished work.",
+      "expected_skill": "hb-release",
+      "should_not_load": ["hb-plan", "hb-worker"]
+    }
+  ]
+}

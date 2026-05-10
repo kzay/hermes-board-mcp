@@ -1,3 +1,8 @@
+---
+name: hb-release
+description: Load when the user wants release readiness, verified task completion, archival of finished work, package release checks, or a final board summary for Hermes-tracked work.
+---
+
 # Hermes Board Release
 
 Verify, complete, archive, and summarize release work tracked in Hermes Kanban.
@@ -18,6 +23,12 @@ Use when the user asks to prepare a release, check whether release tasks are don
 ## External Actions
 
 This skill must not publish packages, push Git refs, create releases, merge pull requests, or modify credentials unless the user explicitly approves that exact external action.
+
+## Gotchas
+
+- Do not complete tasks without concrete verification evidence.
+- Do not archive tasks that are not already complete.
+- Do not treat a local package check as permission to publish.
 
 ## Tool Ownership
 
