@@ -39,7 +39,7 @@ jobs:
             PR title subject must start with an uppercase character.
 
       - name: Check PR description
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const body = context.payload.pull_request.body || '';
