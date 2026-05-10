@@ -4,12 +4,10 @@
  * All kanban tools mirror Hermes's worker CLI surface.
  * Hybrid transport: HermesKanbanClient tries REST first, falls back to CLI.
  */
-import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'fs';
-import { join, dirname } from 'path';
 import { z } from 'zod';
-import { runCommand } from './command-runner.js';
-import { resolveProject, resolveProjectByRepo, resolveOpenspecRoot } from './project.js';
+import { resolveProject, resolveProjectByRepo } from './project.js';
 import { HermesKanbanClient } from './hermes-client.js';
+import { resolveProvider } from './spec-providers/registry.js';
 
 const client = new HermesKanbanClient();
 
@@ -48,6 +46,26 @@ function isValidStatus(s: string | undefined): s is typeof VALID_STATUSES[number
   return VALID_STATUSES.includes(s as typeof VALID_STATUSES[number]);
 }
 
+function extractTaskList(result: unknown): Array<Record<string, unknown>> | null {
+  if (Array.isArray(result)) return result as Array<Record<string, unknown>>;
+  if (!result || typeof result !== 'object') return null;
+
+  const obj = result as Record<string, unknown>;
+  if (Array.isArray(obj.tasks)) return obj.tasks as Array<Record<string, unknown>>;
+
+  if (Array.isArray(obj.columns)) {
+    const tasks: Array<Record<string, unknown>> = [];
+    for (const column of obj.columns as Array<Record<string, unknown>>) {
+      if (Array.isArray(column.tasks)) {
+        tasks.push(...(column.tasks as Array<Record<string, unknown>>));
+      }
+    }
+    return tasks;
+  }
+
+  return null;
+}
+
 // ── OpenSpec metadata block ──────────────────────────────────────
 function formatOpenSpecBlock(fields: { spec_ref?: string; acceptance_criteria?: string; test_command?: string; human_gate_required?: string }) {
   const lines: string[] = [];
@@ -59,7 +77,7 @@ function formatOpenSpecBlock(fields: { spec_ref?: string; acceptance_criteria?: 
   return '```hermes-board-spec\n' + lines.join('\n') + '\n```';
 }
 
-// ── Core kanban_create (shared by kanban_create and kanban_create_from_openspec) ──
+// ── Core hb_create_task (shared by hb_create_task and hb_import_spec) ──
 interface KanbanCreateArgs {
   board: string;
   title: string;
@@ -120,6 +138,10 @@ async function kanbanCreateCore(args: KanbanCreateArgs): Promise<ReturnType<type
   const cliPromise = () => client.cliFallback(cliArgs);
 
   const result = await tryRestThenCli(restPromise, cliPromise);
+  // REST returns { task: {...}, created: true } — unwrap to match CLI flat format
+  if (result && typeof result === 'object' && 'task' in result) {
+    return textResult((result as Record<string, unknown>).task);
+  }
   return textResult(result);
 }
 
@@ -134,7 +156,7 @@ export interface ToolDef {
 export const toolDefs: ToolDef[] = [
   // ── Board-level ──────────────────────────────────────────────────
   {
-    name: 'kanban_boards_list',
+    name: 'hb_list_boards',
     description: 'List all kanban boards.',
     inputSchema: {},
     async handler() {
@@ -143,8 +165,23 @@ export const toolDefs: ToolDef[] = [
     },
   },
 
+  // ── Health / introspection ─────────────────────────────────────
   {
-    name: 'kanban_create_board',
+    name: 'hb_health',
+    description: 'Return MCP server health status including whether dashboard REST is being used.',
+    inputSchema: {},
+    async handler() {
+      return textResult({
+        status: 'ok',
+        service: 'hermes-board-mcp',
+        dashboard_rest_used: client.restUsed,
+        dashboard_url: process.env.HERMES_KANBAN_API_URL || 'http://127.0.0.1:9119/api/plugins/kanban',
+      });
+    },
+  },
+
+  {
+    name: 'hb_create_board',
     description: 'Create a new kanban board.',
     inputSchema: {
       board: z.string().describe('Slug for the new board'),
@@ -152,7 +189,7 @@ export const toolDefs: ToolDef[] = [
     },
     async handler(args) {
       const board = String(args.board);
-      const cmdArgs = ['kanban', 'boards', 'create', board, '--json'];
+      const cmdArgs = ['kanban', 'boards', 'create', board];
       if (args.description) cmdArgs.push('--description', String(args.description));
       const result = await client.cliFallback(cmdArgs);
       return textResult(result);
@@ -161,7 +198,7 @@ export const toolDefs: ToolDef[] = [
 
   // ── Task-level reads ────────────────────────────────────────────
   {
-    name: 'kanban_list',
+    name: 'hb_list_tasks',
     description: 'List tasks on a kanban board, optionally filtered by status or metadata.',
     inputSchema: {
       board: z.string().describe('Board slug'),
@@ -183,9 +220,10 @@ export const toolDefs: ToolDef[] = [
       const cliPromise = () => client.cliFallback(cliArgs);
 
       const result = await tryRestThenCli(restPromise, cliPromise);
-      // Enrich with project metadata
-      if (Array.isArray(result)) {
-        const enriched = (result as Array<Record<string, unknown>>).map(r => ({
+      const tasks = extractTaskList(result);
+      if (tasks) {
+        const filtered = args.status ? tasks.filter(t => t.status === args.status) : tasks;
+        const enriched = filtered.map(r => ({
           ...r,
           ...(resolveProject(String(r.slug || r.board)) || {}),
         }));
@@ -196,7 +234,7 @@ export const toolDefs: ToolDef[] = [
   },
 
   {
-    name: 'kanban_show',
+    name: 'hb_show_task',
     description: 'Show full details of a single kanban task.',
     inputSchema: {
       board: z.string().optional(),
@@ -212,13 +250,18 @@ export const toolDefs: ToolDef[] = [
       const cliPromise = () => client.cliFallback(cliArgs);
 
       const result = await tryRestThenCli(restPromise, cliPromise);
+      // CLI returns { task: {...}, parents: [], children: [], events: [...] }
+      // Extract the task for a cleaner API surface
+      if (result && typeof result === 'object' && 'task' in result) {
+        return textResult((result as Record<string, unknown>).task);
+      }
       return textResult(result);
     },
   },
 
   // ── Task creation ────────────────────────────────────────────────
   {
-    name: 'kanban_create',
+    name: 'hb_create_task',
     description: 'Create a kanban task. OpenSpec metadata (spec_ref, acceptance_criteria, test_command, human_gate_required) is fenced in the body; routing fields use native Hermes flags.',
     inputSchema: {
       board: z.string(),
@@ -262,7 +305,7 @@ export const toolDefs: ToolDef[] = [
 
   // ── Task transitions ─────────────────────────────────────────────
   {
-    name: 'kanban_complete',
+    name: 'hb_complete_task',
     description: 'Complete a kanban task (status → done).',
     inputSchema: {
       board: z.string(),
@@ -281,7 +324,7 @@ export const toolDefs: ToolDef[] = [
       if (result) restBody.result = result;
 
       const restPromise = () => client.tryRest('PATCH', `/tasks/${taskId}`, restBody, { board });
-      const cliArgs = ['kanban', '--board', board, 'complete', taskId, '--json'];
+      const cliArgs = ['kanban', '--board', board, 'complete', taskId];
       if (summary) cliArgs.push('--summary', summary);
       if (result) cliArgs.push('--result', result);
       const cliPromise = () => client.cliFallback(cliArgs);
@@ -292,7 +335,7 @@ export const toolDefs: ToolDef[] = [
   },
 
   {
-    name: 'kanban_block',
+    name: 'hb_block_task',
     description: 'Block a kanban task (status → blocked).',
     inputSchema: {
       board: z.string(),
@@ -307,7 +350,7 @@ export const toolDefs: ToolDef[] = [
       const restBody = { status: 'blocked', reason };
 
       const restPromise = () => client.tryRest('PATCH', `/tasks/${taskId}`, restBody, { board });
-      const cliArgs = ['kanban', '--board', board, 'block', taskId, reason, '--json'];
+      const cliArgs = ['kanban', '--board', board, 'block', taskId, reason];
       const cliPromise = () => client.cliFallback(cliArgs);
 
       const data = await tryRestThenCli(restPromise, cliPromise);
@@ -316,7 +359,7 @@ export const toolDefs: ToolDef[] = [
   },
 
   {
-    name: 'kanban_unblock',
+    name: 'hb_unblock_task',
     description: 'Unblock a kanban task (status → ready).',
     inputSchema: {
       board: z.string(),
@@ -327,7 +370,7 @@ export const toolDefs: ToolDef[] = [
       const taskId = String(args.task_id);
 
       const restPromise = () => client.tryRest('PATCH', `/tasks/${taskId}`, { status: 'ready' }, { board });
-      const cliArgs = ['kanban', '--board', board, 'unblock', taskId, '--json'];
+      const cliArgs = ['kanban', '--board', board, 'unblock', taskId];
       const cliPromise = () => client.cliFallback(cliArgs);
 
       const data = await tryRestThenCli(restPromise, cliPromise);
@@ -336,7 +379,7 @@ export const toolDefs: ToolDef[] = [
   },
 
   {
-    name: 'kanban_archive',
+    name: 'hb_archive_task',
     description: 'Archive a kanban task (status → archived).',
     inputSchema: {
       board: z.string(),
@@ -347,7 +390,7 @@ export const toolDefs: ToolDef[] = [
       const taskId = String(args.task_id);
 
       const restPromise = () => client.tryRest('PATCH', `/tasks/${taskId}`, { status: 'archived' }, { board });
-      const cliArgs = ['kanban', '--board', board, 'archive', taskId, '--json'];
+      const cliArgs = ['kanban', '--board', board, 'archive', taskId];
       const cliPromise = () => client.cliFallback(cliArgs);
 
       const data = await tryRestThenCli(restPromise, cliPromise);
@@ -356,7 +399,7 @@ export const toolDefs: ToolDef[] = [
   },
 
   {
-    name: 'kanban_assign',
+    name: 'hb_assign_task',
     description: 'Assign a kanban task to a profile.',
     inputSchema: {
       board: z.string(),
@@ -369,7 +412,7 @@ export const toolDefs: ToolDef[] = [
       const assignee = String(args.assignee);
 
       const restPromise = () => client.tryRest('PATCH', `/tasks/${taskId}`, { assignee }, { board });
-      const cliArgs = ['kanban', '--board', board, 'assign', taskId, assignee, '--json'];
+      const cliArgs = ['kanban', '--board', board, 'assign', taskId, assignee];
       const cliPromise = () => client.cliFallback(cliArgs);
 
       const data = await tryRestThenCli(restPromise, cliPromise);
@@ -378,7 +421,7 @@ export const toolDefs: ToolDef[] = [
   },
 
   {
-    name: 'kanban_comment',
+    name: 'hb_add_comment',
     description: 'Add a comment to a kanban task.',
     inputSchema: {
       board: z.string(),
@@ -400,7 +443,7 @@ export const toolDefs: ToolDef[] = [
   },
 
   {
-    name: 'kanban_link',
+    name: 'hb_link_tasks',
     description: 'Link a parent task to a child task.',
     inputSchema: {
       board: z.string().optional(),
@@ -426,7 +469,7 @@ export const toolDefs: ToolDef[] = [
   },
 
   {
-    name: 'kanban_unlink',
+    name: 'hb_unlink_tasks',
     description: 'Remove the link between a parent and child task.',
     inputSchema: {
       board: z.string().optional(),
@@ -452,7 +495,7 @@ export const toolDefs: ToolDef[] = [
   },
 
   {
-    name: 'kanban_specify',
+    name: 'hb_specify_task',
     description: 'Run the specify step on a kanban task.',
     inputSchema: {
       board: z.string().optional(),
@@ -473,7 +516,7 @@ export const toolDefs: ToolDef[] = [
   },
 
   {
-    name: 'kanban_dispatch',
+    name: 'hb_dispatch_tasks',
     description: 'Dispatch workers for ready kanban tasks.',
     inputSchema: {
       board: z.string().optional(),
@@ -503,7 +546,7 @@ export const toolDefs: ToolDef[] = [
   },
 
   {
-    name: 'kanban_runs',
+    name: 'hb_get_runs',
     description: 'List worker runs for a task.',
     inputSchema: {
       board: z.string().optional(),
@@ -529,7 +572,7 @@ export const toolDefs: ToolDef[] = [
   },
 
   {
-    name: 'kanban_stats',
+    name: 'hb_get_stats',
     description: 'Show kanban board statistics.',
     inputSchema: {
       board: z.string().optional(),
@@ -549,7 +592,7 @@ export const toolDefs: ToolDef[] = [
   },
 
   {
-    name: 'kanban_tail',
+    name: 'hb_tail_events',
     description: 'Read the most recent events for a task (bounded, one-shot).',
     inputSchema: {
       board: z.string().optional(),
@@ -577,7 +620,7 @@ export const toolDefs: ToolDef[] = [
   },
 
   {
-    name: 'kanban_heartbeat',
+    name: 'hb_send_heartbeat',
     description: 'Send a liveness heartbeat for a long-running task. Workers should call this every few minutes during long operations.',
     inputSchema: {
       board: z.string(),
@@ -596,27 +639,26 @@ export const toolDefs: ToolDef[] = [
     },
   },
 
-  // ── OpenSpec import ──────────────────────────────────────────────
+  // ── Generic spec import ─────────────────────────────────────────
   {
-    name: 'kanban_create_from_openspec',
-    description: 'Read an OpenSpec change and create kanban tasks using portable Git context. Requires base_commit. Defaults workspace to scratch. Derives idempotency keys from project:change:commit:index.',
+    name: 'hb_import_spec',
+    description: 'Create a kanban task from any spec provider. The provider is selected by the spec_ref prefix (e.g. "openspec:change-name", "speckit:feature/42"). The worker receives full Git context and derives spec_path from spec_ref.',
     inputSchema: {
+      spec_ref: z.string().describe('Spec reference with provider prefix, e.g. "openspec:add-dark-mode"'),
+      base_commit: z.string().describe('Full Git commit hash required for worker checkout'),
       board: z.string().optional().describe('Target board slug; optional if project or repo resolves a board'),
-      change_name: z.string().describe('OpenSpec change name'),
       project: z.string().optional().describe('Project slug for routing'),
       repo: z.string().optional().describe('Repo URL or alias for routing'),
-      base_commit: z.string().describe('Full Git commit hash required for worker checkout'),
       base_branch: z.string().optional().describe('Git branch name (defaults to project default_branch)'),
-      spec_ref: z.string().optional().describe('Spec reference, e.g. git ref or tag'),
-      spec_path: z.string().optional().describe('Path within repo to the spec directory'),
-      test_command: z.string().optional().describe('Command to run tests for this spec'),
-      dependency_strategy: z.enum(['none', 'sequential', 'explicit']).optional().describe('none=parallel, sequential=chain, explicit=read from OpenSpec metadata'),
       assignee: z.string().optional(),
       workspace: z.union([z.literal('scratch'), z.literal('worktree'), z.string().regex(/^dir:/)]).optional(),
       skills: z.array(z.string()).optional(),
       allowed_paths: z.array(z.string()).optional().describe('Paths the worker is allowed to modify'),
     },
     async handler(args) {
+      const specRef = String(args.spec_ref);
+      const baseCommit = String(args.base_commit);
+
       // Resolve board from project or repo
       let board: string | undefined = args.board ? String(args.board) : undefined;
       let projectSlug: string | undefined = args.project ? String(args.project) : undefined;
@@ -635,7 +677,7 @@ export const toolDefs: ToolDef[] = [
           const meta = resolveProjectByRepo(repoStr);
           if (!meta) return errorResult(`No project matches repo "${repoStr}"`);
           board = meta.board;
-          projectSlug = meta.board; // canonicalize
+          projectSlug = meta.board;
           repoUrl = meta.repo_url;
           defaultBranch = meta.default_branch;
         } else {
@@ -645,234 +687,48 @@ export const toolDefs: ToolDef[] = [
 
       if (!board) return errorResult('Board could not be resolved');
 
-      const changeName = String(args.change_name);
-      const baseCommit = String(args.base_commit);
-      const baseBranch = args.base_branch ? String(args.base_branch) : defaultBranch;
-      const depStrategy = (args.dependency_strategy as 'none' | 'sequential' | 'explicit' | undefined) ?? 'none';
-
       // If still no repoUrl, try to get it from the resolved project
       if (!repoUrl && projectSlug) {
         const meta = resolveProject(projectSlug);
         if (meta) repoUrl = meta.repo_url;
       }
+      if (!repoUrl) return errorResult('Could not determine repo_url for the project');
 
-      const openspecRoot = resolveOpenspecRoot(projectSlug);
-      const changeDir = join(openspecRoot, 'changes', changeName);
+      const baseBranch = args.base_branch ? String(args.base_branch) : defaultBranch;
 
-      if (!existsSync(changeDir)) {
-        return errorResult(`Change "${changeName}" not found at ${changeDir}`);
-      }
-
-      // Try canonical task list from openspec CLI first
-      let tasks: Array<Record<string, string>> = [];
-      let usedInstructions = false;
+      // Resolve the spec provider and build the body
+      let specBody: string;
       try {
-        const { stdout } = await runCommand('openspec', ['instructions', 'apply', '--change', changeName, '--json'], { cwd: openspecRoot });
-        const parsed = parseJsonSafe(stdout) as unknown;
-        if (parsed && typeof parsed === 'object' && 'tasks' in parsed && Array.isArray((parsed as Record<string, unknown>).tasks)) {
-          tasks = (parsed as Record<string, unknown>).tasks as Array<Record<string, string>>;
-          usedInstructions = true;
-        }
-      } catch {
-        // Fall through to tasks.md parsing
+        const provider = resolveProvider(specRef);
+        specBody = provider.buildBody(specRef, { repoUrl, baseBranch, baseCommit });
+      } catch (err) {
+        return errorResult((err as Error).message);
       }
 
-      if (!tasks.length) {
-        // Fall back to parsing tasks.md
-        const tasksPath = join(changeDir, 'tasks.md');
-        if (!existsSync(tasksPath)) {
-          return errorResult(`No tasks found for change "${changeName}" (no tasks.md and no CLI instructions)`);
-        }
-        const content = readFileSync(tasksPath, 'utf8');
-        const lines = content.split('\n');
-        let currentTitle: string | null = null;
-        let currentBody: string[] = [];
-
-        for (const line of lines) {
-          const headingMatch = line.match(/^#{1,3}\s+(.+)/);
-          const checkboxMatch = line.match(/^-\s+\[[ x]\]\s+(.+)/);
-
-          if (headingMatch || checkboxMatch) {
-            if (currentTitle) {
-              tasks.push({ title: currentTitle, body: currentBody.join('\n').trim() });
-            }
-            currentTitle = headingMatch ? headingMatch[1] : checkboxMatch![1];
-            currentBody = [];
-          } else if (currentTitle) {
-            currentBody.push(line);
-          }
-        }
-        if (currentTitle) {
-          tasks.push({ title: currentTitle, body: currentBody.join('\n').trim() });
-        }
+      // Append optional allowed_paths
+      const allowedPaths = Array.isArray(args.allowed_paths) ? args.allowed_paths.map(String) : undefined;
+      if (allowedPaths && allowedPaths.length) {
+        specBody += `\nallowed_paths: ${allowedPaths.join(', ')}`;
       }
-
-      if (!tasks.length) return errorResult('No tasks found in change');
 
       const projectPrefix = projectSlug || board;
-      const createdIds: Array<unknown> = [];
+      const idempotencyKey = `${projectPrefix}:${specRef}:${baseCommit}`;
 
-      for (let i = 0; i < tasks.length; i++) {
-        const task = tasks[i];
-        // v3 idempotency key: project:change:commit:index
-        const idempotencyKey = `${projectPrefix}:${changeName}:${baseCommit}:${i}`;
+      const workspaceVal = args.workspace ? String(args.workspace) : 'scratch';
 
-        let parents: string[] | undefined;
-        if (depStrategy === 'sequential' && i > 0) {
-          parents = [String(createdIds[i - 1])];
-        } else if (depStrategy === 'explicit' && usedInstructions && task.dependencies) {
-          parents = String(task.dependencies).split(',').map(s => s.trim());
-        } else if (depStrategy === 'explicit' && !usedInstructions) {
-          return errorResult('dependency_strategy=explicit requires OpenSpec instructions JSON with dependency metadata; fallback tasks.md does not support explicit dependencies');
-        }
+      const changeName = specRef.includes(':') ? specRef.split(':').slice(1).join(':') : specRef;
+      const title = `[spec] ${changeName}`;
 
-        // Build portable context block for worker
-        const specRef = args.spec_ref ? String(args.spec_ref) : undefined;
-        const specPath = args.spec_path ? String(args.spec_path) : undefined;
-        const testCommand = args.test_command ? String(args.test_command) : undefined;
-        const allowedPaths = Array.isArray(args.allowed_paths) ? args.allowed_paths.map(String) : undefined;
-        const workspaceVal = args.workspace ? String(args.workspace) : 'scratch';
-
-        const metaBlock = formatOpenSpecBlock({
-          spec_ref: specRef,
-          test_command: testCommand,
-        });
-
-        let fullBody = task.body || '';
-        if (repoUrl) {
-          const checkoutInstructions = [
-            '## Worker Context',
-            `- **repo_url**: ${repoUrl}`,
-            `- **base_branch**: ${baseBranch}`,
-            `- **base_commit**: ${baseCommit}`,
-            specPath ? `- **spec_path**: ${specPath}` : '',
-            testCommand ? `- **test_command**: ${testCommand}` : '',
-            allowedPaths ? `- **allowed_paths**: ${allowedPaths.join(', ')}` : '',
-            '',
-            '## Checkout Instructions',
-            `Clone or fetch \`${repoUrl}\` inside \`$HERMES_KANBAN_WORKSPACE\` and checkout \`${baseCommit}\`.`,
-            specPath ? `Then read the spec at \`${specPath}\`.` : '',
-          ].filter(Boolean).join('\n');
-          fullBody = fullBody ? `${fullBody}\n\n${checkoutInstructions}` : checkoutInstructions;
-        }
-        if (metaBlock) {
-          fullBody = fullBody ? `${fullBody}\n\n${metaBlock}` : metaBlock;
-        }
-
-        const createArgs: KanbanCreateArgs = {
-          board,
-          title: task.title,
-          body: fullBody,
-          idempotency_key: idempotencyKey,
-          assignee: args.assignee ? String(args.assignee) : undefined,
-          workspace: workspaceVal,
-          skills: Array.isArray(args.skills) ? args.skills.map(String) : undefined,
-          parents,
-        };
-
-        try {
-          const result = await kanbanCreateCore(createArgs);
-          const text = (result.content[0] as { text: string }).text;
-          const parsed = parseJsonSafe(text) as Record<string, unknown>;
-          createdIds.push(parsed.id ?? parsed);
-        } catch (err) {
-          createdIds.push({ error: (err as Error).message, title: task.title });
-        }
-      }
-
-      return textResult({ created: createdIds.length, ids: createdIds });
+      return kanbanCreateCore({
+        board,
+        title,
+        body: specBody,
+        idempotency_key: idempotencyKey,
+        assignee: args.assignee ? String(args.assignee) : undefined,
+        workspace: workspaceVal,
+        skills: Array.isArray(args.skills) ? args.skills.map(String) : undefined,
+      });
     },
   },
 
-  // ── OpenSpec tools ────────────────────────────────────────────────
-  {
-    name: 'openspec_validate',
-    description: 'Validate an OpenSpec change.',
-    inputSchema: {
-      change_name: z.string(),
-      project: z.string().optional(),
-    },
-    async handler(args) {
-      const cwd = resolveOpenspecRoot(args.project ? String(args.project) : undefined);
-      const changeName = String(args.change_name);
-      const { stdout } = await runCommand('openspec', [
-        'validate', changeName, '--json', '--no-interactive',
-      ], { cwd });
-      return textResult(parseJsonSafe(stdout));
-    },
-  },
-
-  {
-    name: 'openspec_status',
-    description: 'Get status of an OpenSpec change.',
-    inputSchema: {
-      change_name: z.string(),
-      project: z.string().optional(),
-    },
-    async handler(args) {
-      const cwd = resolveOpenspecRoot(args.project ? String(args.project) : undefined);
-      const changeName = String(args.change_name);
-      const { stdout } = await runCommand('openspec', [
-        'status', '--change', changeName, '--json',
-      ], { cwd });
-      return textResult(parseJsonSafe(stdout));
-    },
-  },
-
-  {
-    name: 'openspec_list',
-    description: 'List all OpenSpec changes for a project.',
-    inputSchema: {
-      project: z.string().optional(),
-    },
-    async handler(args) {
-      const cwd = resolveOpenspecRoot(args.project ? String(args.project) : undefined);
-      const { stdout } = await runCommand('openspec', ['list', '--json'], { cwd });
-      return textResult(parseJsonSafe(stdout));
-    },
-  },
-
-  {
-    name: 'openspec_push',
-    description: 'Upload OpenSpec change artifacts and auto-validate.',
-    inputSchema: {
-      project: z.string(),
-      change_name: z.string(),
-      artifacts: z.record(z.string()).describe('Map of relative path → file content'),
-    },
-    async handler(args) {
-      const projectSlug = String(args.project);
-      const changeName = String(args.change_name);
-      const artifacts = args.artifacts as Record<string, string>;
-      const project = resolveProject(projectSlug);
-      if (!project?.openspec_root) {
-        return errorResult(`Project "${projectSlug}" is not onboarded or has no openspec_root`);
-      }
-
-      const changeDir = join(project.openspec_root, 'changes', changeName);
-      const written: string[] = [];
-
-      for (const [relPath, content] of Object.entries(artifacts)) {
-        if (relPath.includes('..') || relPath.startsWith('/')) {
-          return errorResult(`Invalid path: ${relPath}`);
-        }
-        const fullPath = join(changeDir, relPath);
-        mkdirSync(dirname(fullPath), { recursive: true });
-        writeFileSync(fullPath, content, 'utf8');
-        written.push(relPath);
-      }
-
-      let validation: unknown;
-      try {
-        const { stdout } = await runCommand('openspec', [
-          'validate', changeName, '--json', '--no-interactive',
-        ], { cwd: project.openspec_root });
-        validation = parseJsonSafe(stdout);
-      } catch (err) {
-        validation = { error: (err as Error).message };
-      }
-
-      return textResult({ written, validation });
-    },
-  },
 ];

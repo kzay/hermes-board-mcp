@@ -35,7 +35,7 @@
       "properties": {
         "slug": {
           "type": "string",
-          "description": "Project slug used for OpenSpec root resolution"
+          "description": "Project slug used for Hermes board routing"
         },
         "board": {
           "type": "string",
@@ -54,7 +54,7 @@
         },
         "aliases": {
           "type": "array",
-          "items": { "type": "string", "format": "uri" },
+          "items": { "type": "string" },
           "description": "Additional clone URLs for matching (e.g. SSH alternate)",
           "default": []
         },
@@ -67,14 +67,15 @@
     },
     "defaults": {
       "type": "object",
-      "description": "Default values passed to kanban_create when not overridden by the skill",
+      "description": "Default values passed to hb_create_task when not overridden by the skill",
       "properties": {
         "assignee": {
           "type": "string"
         },
         "workspace": {
           "type": "string",
-          "enum": ["scratch", "worktree"]
+          "enum": ["scratch", "worktree"],
+          "default": "scratch"
         },
         "max_runtime": {
           "type": "string",

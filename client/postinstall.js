@@ -1,15 +1,24 @@
 #!/usr/bin/env node
 /**
- * Copies board skills into .cursor/skills/board/ after npm install.
+ * Copies canonical Hermes Board skills into .cursor/skills/board/.
  * Also scaffolds hermes-board.json if absent.
- * Does NOT overwrite existing files — safe to re-run.
+ * Existing files are never overwritten.
  */
-import { readdirSync, copyFileSync, existsSync, mkdirSync, statSync, writeFileSync } from 'fs';
-import { join, resolve } from 'path';
+import { copyFileSync, existsSync, mkdirSync, statSync, writeFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join, resolve } from 'path';
 
-const SKILLS_SRC = new URL('./skills', import.meta.url).pathname;
+const __dirname = dirname(fileURLToPath(import.meta.url));
 const TARGET_BASE = resolve(process.cwd(), '.cursor', 'skills', 'board');
 const BOARD_CONFIG_PATH = resolve(process.cwd(), 'hermes-board.json');
+
+const CANONICAL_SKILLS = [
+  'hb-deploy',
+  'hb-monitor',
+  'hb-plan',
+  'hb-worker',
+  'hb-release',
+];
 
 const BOARD_CONFIG_PLACEHOLDER = JSON.stringify({
   config_version: 1,
@@ -42,25 +51,30 @@ const BOARD_CONFIG_PLACEHOLDER = JSON.stringify({
   },
 }, null, 2);
 
-function copyDir(src, dest) {
-  mkdirSync(dest, { recursive: true });
-  for (const entry of readdirSync(src)) {
-    const srcPath = join(src, entry);
-    const destPath = join(dest, entry);
-    if (statSync(srcPath).isDirectory()) {
-      copyDir(srcPath, destPath);
-    } else if (!existsSync(destPath)) {
-      copyFileSync(srcPath, destPath);
-      console.log(`  copied: ${destPath}`);
-    } else {
-      console.log(`  exists: ${destPath} (skipped)`);
-    }
+function copySkill(skillName) {
+  const srcDir = join(__dirname, 'skills', skillName);
+  const srcPath = join(srcDir, 'SKILL.md');
+  const destDir = join(TARGET_BASE, skillName);
+  const destPath = join(destDir, 'SKILL.md');
+
+  if (!existsSync(srcPath) || !statSync(srcPath).isFile()) {
+    throw new Error(`missing canonical skill file: ${srcPath}`);
+  }
+
+  mkdirSync(destDir, { recursive: true });
+  if (!existsSync(destPath)) {
+    copyFileSync(srcPath, destPath);
+    console.log(`  copied: ${destPath}`);
+  } else {
+    console.log(`  exists: ${destPath} (skipped)`);
   }
 }
 
 try {
-  console.log('[hermes-board-skills] Installing Cursor skills...');
-  copyDir(SKILLS_SRC, TARGET_BASE);
+  console.log('[hermes-board-skills] Installing canonical hb-* Cursor skills...');
+  mkdirSync(TARGET_BASE, { recursive: true });
+
+  for (const skillName of CANONICAL_SKILLS) copySkill(skillName);
 
   if (!existsSync(BOARD_CONFIG_PATH)) {
     writeFileSync(BOARD_CONFIG_PATH, BOARD_CONFIG_PLACEHOLDER, 'utf8');
@@ -70,8 +84,8 @@ try {
     console.log(`  exists: ${BOARD_CONFIG_PATH} (skipped)`);
   }
 
-  console.log('[hermes-board-skills] Done. See AGENTS.md for configuration steps.');
+  console.log('[hermes-board-skills] Done. See client/AGENTS.md for configuration steps.');
 } catch (err) {
   console.warn(`[hermes-board-skills] WARN: could not copy skills: ${err.message}`);
-  console.warn('[hermes-board-skills] You can manually copy skills/ to .cursor/skills/board/');
+  console.warn('[hermes-board-skills] You can manually copy client/skills/hb-* to .cursor/skills/board/');
 }

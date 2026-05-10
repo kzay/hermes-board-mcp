@@ -5,8 +5,11 @@
  */
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
+import { createRequire } from 'module';
 
 const args = process.argv.slice(2);
+const req = createRequire(import.meta.url);
+const pkg = req('../../package.json') as { version: string };
 
 function flag(name: string, fallback: string | null): string | null {
   const idx = args.indexOf(name);
@@ -40,15 +43,12 @@ if (policyFile) process.env.BOARD_MCP_POLICY = policyFile;
 
 // Handle standalone flags before positional args
 if (args.includes('--version') || args.includes('-v')) {
-  const { createRequire } = await import('module');
-  const req = createRequire(import.meta.url);
-  const pkg = req('../../package.json') as { version: string };
   console.log(pkg.version);
   process.exit(0);
 }
 
 if (args.includes('--help') || args.includes('-h')) {
-  console.log(`hermes-board-mcp v2.0.0 — Hermes Board MCP server
+  console.log(`hermes-board-mcp v${pkg.version} — Hermes Board MCP server
 
 Usage:
   hermes-board-mcp [start] [options]
@@ -87,9 +87,14 @@ if (command === 'start') {
       slug: 'YOUR_PROJECT_SLUG',
       board: 'YOUR_PROJECT_SLUG',
     },
+    repo: {
+      url: 'https://github.com/YOU/YOUR_REPO.git',
+      aliases: ['git@github.com:YOU/YOUR_REPO.git'],
+      default_branch: 'main',
+    },
     defaults: {
       assignee: 'builder',
-      workspace: 'worktree',
+      workspace: 'scratch',
       max_runtime: '2h',
       skills: [],
       tenant: null,
