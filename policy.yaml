@@ -1,4 +1,4 @@
-# hermes-board-mcp v3.3 tool access policy
+# hermes-board-mcp v3.3.1 tool access policy
 # Profile → list of allowed tools
 # Profiles not listed here are denied all access (default-deny).
 

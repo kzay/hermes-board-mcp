@@ -1,4 +1,4 @@
-# hermes-board-mcp v3.3
+# hermes-board-mcp v3.3.1
 
 Standalone MCP server exposing kanban and provider-backed spec import tools for the Hermes board system. Agents and Cursor IDE instances connect to this server to list boards, create tasks, dispatch spec work, and monitor worker progress via the Model Context Protocol over HTTP.
 
@@ -10,7 +10,7 @@ Standalone MCP server exposing kanban and provider-backed spec import tools for 
 - `hb_health` for MCP-level setup verification.
 - `hb_send_heartbeat` for long-running worker liveness.
 - `repo` metadata in `hermes-board.json` for portable committed-ref dispatch.
-- Server package and client skills package are released together as `3.3.0`.
+- Server package and client skills package are released together as `3.3.1`.
 
 ## Quickstart
 

@@ -67,7 +67,7 @@ The current project already follows several of these principles:
    Today `openspec:` is the only release-ready provider. As additional prefixes become real, provider-specific validation and dispatch guidance should move into `references/providers/<provider>.md` or equivalent runtime-loaded material.
 
 6. Documentation drift is already visible.
-   The root `package.json` reports `3.3.0`, while some installation and release-facing docs still refer to `3.2` or `3.2.0`. This is not a skill-design problem by itself, but stale release facts often leak into skills and agent instructions.
+   Before the hardening pass, the root `package.json` and some installation docs disagreed about the active release version. This is not a skill-design problem by itself, but stale release facts often leak into skills and agent instructions.
 
 ## Recommended Skill Architecture
 
@@ -153,4 +153,3 @@ For each skill, include forbidden examples for adjacent intents. Negative exampl
 5. Add a docs/version drift check for release-facing instructions so `AGENTS.md`, `README.md`, `client/README.md`, and package metadata do not diverge.
 
 6. When a second provider becomes release-ready, split provider-specific client guidance out of `hb-deploy` into a progressively loaded reference file.
-
