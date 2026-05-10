@@ -1,0 +1,44 @@
+services:
+  mcp-hermes:
+    build:
+      context: .
+      dockerfile: Dockerfile.e2e
+    container_name: mcp-hermes
+    ports:
+      - "9119:9119"
+    volumes:
+      - hermes-e2e-data:/root/.hermes
+    networks:
+      - e2e
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:7332/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  client:
+    build:
+      context: .
+      dockerfile: Dockerfile.e2e.client
+    container_name: e2e-client
+    depends_on:
+      mcp-hermes:
+        condition: service_healthy
+    networks:
+      - e2e
+    environment:
+      - MCP_SERVER_URL=http://mcp-hermes:7332
+      - MCP_AUTH_TOKEN=e2e-test-token
+
+volumes:
+  hermes-e2e-data:
+
+networks:
+  e2e:
+    driver: bridge

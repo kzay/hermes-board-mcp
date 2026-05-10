@@ -18,7 +18,7 @@
   },
   "defaults": {
     "assignee": "builder",
-    "workspace": "worktree",
+    "workspace": "scratch",
     "max_runtime": "2h",
     "skills": [],
     "tenant": null,

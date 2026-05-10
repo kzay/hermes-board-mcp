@@ -42,6 +42,8 @@ export class HermesKanbanClient {
   private baseUrl: string;
   private allowRemote: boolean;
   private warnedOnce = false;
+  /** Set to true after the first successful REST call in this process */
+  public restUsed = false;
 
   constructor() {
     this.baseUrl = (process.env.HERMES_KANBAN_API_URL || DEFAULT_API_URL).replace(/\/$/, '');
@@ -69,7 +71,10 @@ export class HermesKanbanClient {
       }
     }
 
-    const url = new URL(path, this.baseUrl);
+    // Append path to baseUrl (preserve base path like /api/plugins/kanban)
+    const base = this.baseUrl.replace(/\/$/, '');
+    const cleanPath = path.startsWith('/') ? path : `/${path}`;
+    const url = new URL(base + cleanPath);
     if (query) {
       for (const [k, v] of Object.entries(query)) {
         if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
@@ -91,6 +96,7 @@ export class HermesKanbanClient {
       }
       const data = await res.json() as unknown;
       this.failureCache.clear();
+      this.restUsed = true;
       return data;
     } catch (err) {
       this.failureCache.recordFailure();

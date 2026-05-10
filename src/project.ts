@@ -9,9 +9,6 @@ import { join } from 'path';
 import yaml from 'js-yaml';
 
 export interface ProjectMeta {
-  openspec_root: string;
-  project_root: string;
-  worktree_root: string;
   repo_url: string;
   board: string;
   repo_aliases: string[];
@@ -19,8 +16,6 @@ export interface ProjectMeta {
 }
 
 const PROJECTS_BASE = process.env.HERMES_PROJECTS_BASE || '/opt/hermes/projects';
-const DEFAULT_OPENSPEC_ROOT = process.env.HERMES_OPENSPEC_ROOT
-  || join(process.env.HOME || '/root', '.hermes', 'factory', 'openspec');
 
 export function resolveProject(boardSlug?: string | null): ProjectMeta | null {
   if (!boardSlug) return null;
@@ -32,9 +27,6 @@ export function resolveProject(boardSlug?: string | null): ProjectMeta | null {
     const raw = readFileSync(metaPath, 'utf8');
     const data = yaml.load(raw) as Record<string, unknown> | undefined || {};
     return {
-      openspec_root: data.openspec_root ? String(data.openspec_root) : DEFAULT_OPENSPEC_ROOT,
-      project_root: data.project_root ? String(data.project_root) : '',
-      worktree_root: data.worktree_root ? String(data.worktree_root) : '',
       repo_url: data.repo_url ? String(data.repo_url) : '',
       board: data.board ? String(data.board) : boardSlug,
       repo_aliases: Array.isArray(data.repo_aliases)
@@ -45,15 +37,6 @@ export function resolveProject(boardSlug?: string | null): ProjectMeta | null {
   } catch {
     return null;
   }
-}
-
-/**
- * Resolve the OpenSpec root for a given project slug, falling back to the
- * factory-level default if no project metadata exists.
- */
-export function resolveOpenspecRoot(projectSlug?: string | null): string {
-  const project = resolveProject(projectSlug);
-  return project?.openspec_root || DEFAULT_OPENSPEC_ROOT;
 }
 
 // ── Repo normalization ────────────────────────────────────────────

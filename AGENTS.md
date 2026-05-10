@@ -1,4 +1,4 @@
-# hermes-board-mcp v3 — Agent Instructions
+# hermes-board-mcp v3.2 - Agent Instructions
 
 Instructions for AI agents to install, configure, and verify the hermes-board-mcp server on a VPS.
 
@@ -9,10 +9,10 @@ Verify each before proceeding:
 ```bash
 node --version    # must be >= 20.0.0
 hermes --version  # must have kanban subcommand
-openspec --version  # installed at ~/.local/bin/openspec
+openspec --version
 ```
 
-If `hermes` is missing, install it following https://hermes-agent.nousresearch.com/docs/.
+If `hermes` is missing, install it from the Hermes Agent docs.
 If `openspec` is missing: `npm install -g @fission-ai/openspec@1.3.1`.
 
 ## Install
@@ -22,7 +22,7 @@ npm install -g @kzay/hermes-board-mcp
 hermes-board-mcp --version
 ```
 
-If the global install is not possible, run from source:
+If global install is not possible, run from source:
 
 ```bash
 cd /opt/hermes/hermes-board-mcp
@@ -41,7 +41,7 @@ echo "BOARD_MCP_TOKENS=$TOKEN:orchestrator" >> /etc/hermes/hermes-board-mcp.env
 echo "PORT=7332" >> /etc/hermes/hermes-board-mcp.env
 ```
 
-Record the token value — clients will need it.
+Record the token value; clients need it.
 
 ### Policy file
 
@@ -52,13 +52,13 @@ cp $(npm root -g)/@kzay/hermes-board-mcp/policy.yaml /etc/hermes/hermes-board-mc
 echo "BOARD_MCP_POLICY=/etc/hermes/hermes-board-mcp-policy.yaml" >> /etc/hermes/hermes-board-mcp.env
 ```
 
-### Dashboard integration (optional)
+### Dashboard integration
 
 If the Hermes dashboard plugin is running, the MCP server uses REST for faster operations:
 
 ```bash
 echo "HERMES_KANBAN_API_URL=http://127.0.0.1:9119/api/plugins/kanban" >> /etc/hermes/hermes-board-mcp.env
-# Only set ALLOW_REMOTE=1 if the dashboard is behind a trusted reverse proxy
+# Only set ALLOW_REMOTE=1 if the dashboard is behind a trusted reverse proxy.
 # echo "HERMES_KANBAN_API_ALLOW_REMOTE=1" >> /etc/hermes/hermes-board-mcp.env
 ```
 
@@ -72,7 +72,9 @@ curl -s http://127.0.0.1:7332/health
 kill %1
 ```
 
-## Systemd (Persistent Service)
+For MCP-level verification, call `hb_health` with a profile allowed by `policy.yaml`, then call `hb_list_boards`.
+
+## Systemd
 
 ```bash
 cp $(npm root -g)/@kzay/hermes-board-mcp/hermes-board-mcp.service /etc/systemd/system/
@@ -82,7 +84,7 @@ systemctl status hermes-board-mcp
 journalctl -u hermes-board-mcp --no-pager -n 20
 ```
 
-## Caddy (External TLS Access)
+## Caddy
 
 Add to Caddyfile:
 
@@ -97,21 +99,26 @@ hermes-board-mcp.{$HERMES_VPS_DOMAIN} {
 Then:
 
 ```bash
-# Create DNS A record for hermes-board-mcp.$HERMES_VPS_DOMAIN → VPS IP
 caddy reload --config /etc/caddy/Caddyfile
-
-# Test external access
 curl -H "Authorization: Bearer $TOKEN" https://hermes-board-mcp.$HERMES_VPS_DOMAIN/health
 ```
+
+## Release Client Model
+
+- Use `hb_import_spec` for provider-backed spec dispatch.
+- `openspec:<change-name>` is the release-ready provider prefix.
+- Client skills live in `@kzay/hermes-board-skills` and use canonical `hb-*` names.
+- Server and client packages are aligned at version `3.2.0`.
 
 ## Troubleshoot
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | `EADDRINUSE` | Port 7332 already in use | Check `lsof -i :7332`, stop conflicting process |
-| `hermes: command not found` | hermes CLI not in PATH | Add hermes install dir to PATH in env file |
-| `openspec: command not found` | openspec not in PATH | Ensure `~/.local/bin` is in PATH |
-| Policy denies all tools | Profile not in policy.yaml | Add the profile to `policy.yaml`, send SIGHUP |
-| Health returns 401 | Auth required but no token sent | Loopback should bypass — check `BOARD_MCP_REQUIRE_AUTH` |
-| Slow kanban operations | Dashboard plugin not running; CLI fallback used | Start `hermes dashboard` or check `HERMES_KANBAN_API_URL` |
-| `kanban_create_from_openspec` rejects dispatch | Missing `base_commit` or commit not reachable from remote | Ensure the spec is committed and pushed to a reachable ref |
+| `hermes: command not found` | Hermes CLI not in PATH | Add Hermes install dir to PATH in env file |
+| `openspec: command not found` | OpenSpec CLI not in PATH | Ensure the install directory is in PATH |
+| Policy denies all tools | Profile not in policy file | Add the profile to `policy.yaml`, send SIGHUP |
+| Health returns 401 | Auth required but no token sent | Loopback should bypass unless `BOARD_MCP_REQUIRE_AUTH=always` |
+| Slow kanban operations | Dashboard plugin unavailable; CLI fallback used | Start `hermes dashboard` or check `HERMES_KANBAN_API_URL` |
+| `hb_import_spec` rejects dispatch | Missing `base_commit` or commit not reachable from remote | Ensure the spec is committed and pushed to a reachable ref |
+| Unknown spec provider | Prefix is not release-ready | Use `openspec:` for this release |

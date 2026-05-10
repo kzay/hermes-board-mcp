@@ -19,46 +19,54 @@ describe('policy', () => {
     initPolicy();
   });
 
-  it('allows planner to call kanban_boards_list', () => {
-    assert.doesNotThrow(() => checkAccess('planner', 'kanban_boards_list'));
+  it('allows planner to call hb_list_boards', () => {
+    assert.doesNotThrow(() => checkAccess('planner', 'hb_list_boards'));
   });
 
-  it('allows orchestrator to call openspec_push', () => {
-    assert.doesNotThrow(() => checkAccess('orchestrator', 'openspec_push'));
+  it('allows orchestrator to call hb_create_task', () => {
+    assert.doesNotThrow(() => checkAccess('orchestrator', 'hb_create_task'));
   });
 
-  it('denies builder from calling openspec_push', () => {
+  it('denies builder from calling hb_create_board', () => {
     assert.throws(
-      () => checkAccess('builder', 'openspec_push'),
+      () => checkAccess('builder', 'hb_create_board'),
       PolicyViolationError
     );
   });
 
   it('denies unknown profile', () => {
     assert.throws(
-      () => checkAccess('hacker', 'kanban_boards_list'),
+      () => checkAccess('hacker', 'hb_list_boards'),
       PolicyViolationError
     );
   });
 
-  it('allows builder to call kanban_heartbeat', () => {
-    assert.doesNotThrow(() => checkAccess('builder', 'kanban_heartbeat'));
+  it('allows builder to call hb_send_heartbeat', () => {
+    assert.doesNotThrow(() => checkAccess('builder', 'hb_send_heartbeat'));
   });
 
-  it('denies default profile from calling kanban_heartbeat', () => {
+  it('denies default profile from calling hb_send_heartbeat', () => {
     assert.throws(
-      () => checkAccess('default', 'kanban_heartbeat'),
+      () => checkAccess('default', 'hb_send_heartbeat'),
       PolicyViolationError
     );
   });
 
-  it('allows default profile to call kanban_boards_list', () => {
-    assert.doesNotThrow(() => checkAccess('default', 'kanban_boards_list'));
+  it('allows default profile to call hb_list_boards', () => {
+    assert.doesNotThrow(() => checkAccess('default', 'hb_list_boards'));
   });
 
-  it('denies default profile from calling kanban_create', () => {
+  it('allows default profile to call hb_health', () => {
+    assert.doesNotThrow(() => checkAccess('default', 'hb_health'));
+  });
+
+  it('allows builder profile to call hb_health', () => {
+    assert.doesNotThrow(() => checkAccess('builder', 'hb_health'));
+  });
+
+  it('denies default profile from calling hb_create_task', () => {
     assert.throws(
-      () => checkAccess('default', 'kanban_create'),
+      () => checkAccess('default', 'hb_create_task'),
       PolicyViolationError
     );
   });

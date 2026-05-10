@@ -1,6 +1,6 @@
 {
   "name": "@kzay/hermes-board-mcp",
-  "version": "3.0.0",
+  "version": "3.2.0",
   "description": "Standalone MCP server exposing kanban and OpenSpec tools for the Hermes board system",
   "type": "module",
   "main": "dist/src/index.js",
@@ -17,7 +17,13 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/cli.ts start",
-    "test": "npm run build && node --test dist/test/",
+    "test:unit": "npm run build && node --test dist/test/auth.test.js dist/test/policy.test.js dist/test/project.test.js dist/test/spec-provider-registry.test.js dist/test/openspec-provider.test.js dist/test/hb-import-spec.test.js dist/test/release-check.test.js",
+    "test": "npm run test:unit",
+    "test:e2e:up": "docker compose -f docker-compose.e2e.yml up --build -d",
+    "test:e2e": "npm run build && docker compose -f docker-compose.e2e.yml run --rm client",
+    "test:e2e:down": "docker compose -f docker-compose.e2e.yml down",
+    "test:e2e:reset": "npm run build && node dist/scripts/reset-e2e.js",
+    "release:check": "npm run build && node dist/scripts/release-check.js",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "npm test"
   },

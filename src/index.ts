@@ -15,12 +15,14 @@ import crypto from 'crypto';
 import { toolDefs } from './tools.js';
 import { initPolicy, checkAccess, PolicyViolationError } from './policy.js';
 import { authenticateRequest, initAuth } from './auth.js';
+import { initSpecProviders } from './spec-providers/index.js';
 
 const PORT = parseInt(process.env.PORT || '7332', 10);
 const SESSION_TTL_MS = 30 * 60 * 1000; // 30 min
 
 initPolicy();
 initAuth();
+initSpecProviders();
 
 interface Session {
   transport: StreamableHTTPServerTransport;
