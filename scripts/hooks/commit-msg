@@ -1,0 +1,21 @@
+#!/bin/sh
+# commit-msg — reject commits that contain Cursor IDE attribution
+#
+# This prevents the Cursor IDE from injecting:
+#   Co-authored-by: Cursor <cursoragent@cursor.com>
+# into commit messages.
+#
+# The hook receives the path to the commit message file as $1.
+
+commit_msg_file="$1"
+
+if grep -qEi 'Co-authored-by:.*cursoragent|Co-authored-by:.*Cursor' "$commit_msg_file"; then
+  echo ""
+  echo "ERROR: Commit message contains Cursor IDE attribution."
+  echo "       Remove the 'Co-authored-by: Cursor' line before committing."
+  echo "       If you authored this commit yourself, the attribution is incorrect."
+  echo ""
+  exit 1
+fi
+
+exit 0
