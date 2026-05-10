@@ -1,5 +1,18 @@
 # Changelog
 
+## 3.3.0 - Public production release hardening
+
+### Client Skills
+- Added frontmatter routing metadata to the canonical `hb-*` skills.
+- Kept top-level skills workflow-oriented and moved OpenSpec-specific deploy details into `hb-deploy/references/providers/openspec.md`.
+- Added routing eval fixtures to guard skill selection across deploy, monitor, plan, worker, and release workflows.
+- Updated client postinstall to copy whole skill directories, including nested provider references, without overwriting existing files.
+
+### Release Readiness
+- Extended release checks to validate client skill source quality, routing eval references, stale skill directories, and required package files.
+- Aligned server and client packages at version `3.3.0`.
+- Included public release assets and deployment files in the npm package surface.
+
 ## 3.2.0 - Release-ready client skills and provider import
 
 ### MCP Tool Surface

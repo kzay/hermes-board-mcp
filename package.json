@@ -10,14 +10,17 @@
   "files": [
     "dist/src",
     "policy.yaml",
+    "hermes-board-mcp.service",
     "README.md",
     "AGENTS.md",
-    "CLAUDE.md"
+    "CLAUDE.md",
+    "CHANGELOG.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/cli.ts start",
-    "test:unit": "npm run build && node --test dist/test/auth.test.js dist/test/policy.test.js dist/test/project.test.js dist/test/spec-provider-registry.test.js dist/test/openspec-provider.test.js dist/test/hb-import-spec.test.js dist/test/release-check.test.js",
+    "test:unit": "npm run build && node --test dist/test/auth.test.js dist/test/policy.test.js dist/test/project.test.js dist/test/spec-provider-registry.test.js dist/test/openspec-provider.test.js dist/test/hb-import-spec.test.js dist/test/release-check.test.js dist/test/client-postinstall.test.js",
     "test": "npm run test:unit",
     "test:e2e:up": "docker compose -f docker-compose.e2e.yml up --build -d",
     "test:e2e": "npm run build && docker compose -f docker-compose.e2e.yml run --rm client",
@@ -48,7 +51,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/hermes-agents/hermes-board-mcp.git",
+    "url": "git+https://github.com/kzay/hermes-board-mcp.git",
     "directory": "."
   },
   "devDependencies": {

@@ -8,11 +8,18 @@ Canonical `hb-*` Cursor IDE skills for interacting with the Hermes Board MCP Ser
 npm install @kzay/hermes-board-skills
 ```
 
-The postinstall script copies the canonical skill suite to `.cursor/skills/board/` without overwriting existing files:
+The postinstall script copies the canonical skill suite to `.cursor/skills/board/` without overwriting existing files. It copies whole skill directories, including provider references.
+
+If your package manager skips lifecycle scripts, run the setup command from your project root:
+
+```bash
+npx hermes-board-skills-setup
+```
 
 ```text
 .cursor/skills/board/
   hb-deploy/SKILL.md
+  hb-deploy/references/providers/openspec.md
   hb-monitor/SKILL.md
   hb-plan/SKILL.md
   hb-worker/SKILL.md
@@ -72,6 +79,8 @@ Then invoke `hb_health` or `hb_list_boards` from Cursor. A successful response c
 
 `hb-deploy` supports `openspec:<change-name>` for this release. The server registry may know about future provider prefixes, but the client skill treats not-yet-implemented providers as unavailable until the server can build real task bodies for them.
 
+Provider-specific local checks live under each skill's `references/providers/` directory. Top-level skills stay workflow-oriented so new providers do not create routing noise.
+
 ## Multi-Project Usage
 
 Each repo gets its own install and `.cursor/mcp.json`, but they can all connect to the same Hermes Board MCP server on the VPS. The server uses the `project` or `repo` argument in tool calls to route to the correct board.
@@ -88,7 +97,7 @@ The release skill names use the `hb-*` prefix. Older OpenSpec-named entry points
 |-------|-------|-----|
 | `401 Unauthorized` | Wrong or missing token | Check `BOARD_MCP_TOKEN` matches a server token |
 | `Connection refused` | Server not running | Verify the `/health` endpoint returns 200 |
-| Skills not appearing | postinstall did not run | Run `node node_modules/@kzay/hermes-board-skills/postinstall.js` |
+| Skills not appearing | postinstall did not run | Run `npx hermes-board-skills-setup` |
 | `ENOTFOUND` | Wrong domain in MCP config | Check `.cursor/mcp.json` URL |
 | MCP tools not listed | MCP config missing or malformed | Re-copy `hermes-board-mcp.example.json` and merge carefully |
 

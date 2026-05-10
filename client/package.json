@@ -1,18 +1,25 @@
 {
   "name": "@kzay/hermes-board-skills",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "description": "Canonical hb-* Cursor IDE skills for interacting with the Hermes Board MCP Server",
+  "bin": {
+    "hermes-board-skills-setup": "postinstall.js"
+  },
   "scripts": {
+    "setup": "node postinstall.js",
     "postinstall": "node postinstall.js"
   },
   "files": [
     "AGENTS.md",
+    "CHANGELOG.md",
+    "LICENSE",
     "README.md",
     "TOOL_COVERAGE.md",
     "hermes-board-mcp.example.json",
     "hermes-board.example.json",
     "hermes-board.schema.json",
     "postinstall.js",
+    "skills/evals",
     "skills/hb-deploy",
     "skills/hb-monitor",
     "skills/hb-plan",
@@ -35,7 +42,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/hermes-agents/hermes-board-mcp.git",
+    "url": "git+https://github.com/kzay/hermes-board-mcp.git",
     "directory": "client"
   }
 }

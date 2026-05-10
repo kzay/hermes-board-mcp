@@ -1,3 +1,8 @@
+---
+name: hb-monitor
+description: Load when the user wants board status, task status, worker runs, kanban overview, spec status, or to follow provider-backed Hermes work until completion or failure.
+---
+
 # Hermes Board Monitor
 
 Inspect Hermes Kanban boards and follow provider-backed spec work end to end.
@@ -41,3 +46,9 @@ Purpose: Track a deployed provider-backed spec until completion or failure.
 
 - `hb_list_boards`, `hb_list_tasks`, `hb_show_task`, `hb_get_runs`, and `hb_tail_events` MCP tools must be available.
 - `openspec` CLI is only needed for local OpenSpec listing.
+
+## Gotchas
+
+- Do not create, dispatch, complete, or archive tasks from this skill.
+- Do not infer completion from a quiet board; inspect task status and runs.
+- Do not require local OpenSpec files to monitor already-dispatched provider work.
