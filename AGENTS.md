@@ -1,4 +1,4 @@
-# hermes-board-mcp v3.3.1 - Agent Instructions
+# hermes-board-mcp v3.3.2 - Agent Instructions
 
 Instructions for AI agents to install, configure, and verify the hermes-board-mcp server on a VPS.
 
@@ -126,7 +126,7 @@ curl -H "Authorization: Bearer $TOKEN" https://hermes-board-mcp.$HERMES_VPS_DOMA
 - Use `hb_import_spec` for provider-backed spec dispatch.
 - `openspec:<change-name>` is the release-ready provider prefix.
 - Client skills live in `@kzay/hermes-board-skills` and use canonical `hb-*` names.
-- Server and client packages are aligned at version `3.3.1`.
+- Server and client packages are aligned at version `3.3.2`.
 
 ## Troubleshoot
 

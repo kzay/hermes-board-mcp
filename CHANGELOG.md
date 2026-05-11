@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased - Code review fixes
+## 3.3.2 - 2026-05-10
 
 ### Fixed
 - `hb_import_spec`: When `board` is provided directly, `args.repo` is now used as a fallback repo URL if no `factory-project.yaml` exists on disk.
