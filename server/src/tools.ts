@@ -441,7 +441,7 @@ export const toolDefs: ToolDef[] = [
       const comment = String(args.comment);
 
       const restPromise = () => client.tryRest('POST', `/tasks/${taskId}/comments`, { comment }, { board });
-      const cliArgs = ['kanban', '--board', board, 'comment', taskId, comment, '--json'];
+      const cliArgs = ['kanban', '--board', board, 'comment', taskId, comment];
       const cliPromise = () => client.cliFallback(cliArgs);
 
       const data = await tryRestThenCli(restPromise, cliPromise);
