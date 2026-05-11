@@ -5,6 +5,49 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+describe('globMatch', () => {
+  let globMatch: typeof import('../src/policy.js').globMatch;
+
+  beforeEach(async () => {
+    const mod = await import('../src/policy.js?t=' + Date.now());
+    globMatch = mod.globMatch;
+  });
+
+  it('matches exact string', () => {
+    assert.equal(globMatch('hb_list_boards', 'hb_list_boards'), true);
+  });
+
+  it('rejects different exact string', () => {
+    assert.equal(globMatch('hb_list_boards', 'hb_create_task'), false);
+  });
+
+  it('matches hb_* wildcard', () => {
+    assert.equal(globMatch('hb_*', 'hb_list_boards'), true);
+    assert.equal(globMatch('hb_*', 'hb_create_task'), true);
+    assert.equal(globMatch('hb_*', 'hb_health'), true);
+  });
+
+  it('rejects non-matching wildcard', () => {
+    assert.equal(globMatch('hb_*', 'other_tool'), false);
+  });
+
+  it('matches partial wildcard hb_list_*', () => {
+    assert.equal(globMatch('hb_list_*', 'hb_list_boards'), true);
+    assert.equal(globMatch('hb_list_*', 'hb_list_tasks'), true);
+    assert.equal(globMatch('hb_list_*', 'hb_create_task'), false);
+  });
+
+  it('matches ? single-char wildcard', () => {
+    assert.equal(globMatch('hb_?', 'hb_x'), true);
+    assert.equal(globMatch('hb_?', 'hb_ab'), false);
+  });
+
+  it('handles no wildcards as exact match', () => {
+    assert.equal(globMatch('exact', 'exact'), true);
+    assert.equal(globMatch('exact', 'exactx'), false);
+  });
+});
+
 describe('policy', () => {
   let checkAccess: typeof import('../src/policy.js').checkAccess;
   let initPolicy: typeof import('../src/policy.js').initPolicy;

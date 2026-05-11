@@ -11,6 +11,10 @@ Validate and dispatch a provider-backed spec to Hermes Kanban using `hb_import_s
 
 Use when the user says "deploy this spec", "push spec to kanban", "create board work from this change", "dispatch this change", or wants a local spec tracked by Hermes workers.
 
+## Execution Principle
+
+When the user invokes `/hb-deploy <name>`, the intent is **already declared**. Do not ask "do you want to deploy?" or "shall I proceed?" — execute. Only stop if a real blocker exists (missing files, uncommitted changes, unreachable commit, unsupported prefix). If all prerequisites pass, dispatch immediately and report the result. No narration of intermediate steps, no confirmation prompts when there is nothing blocking.
+
 ## Supported Providers
 
 - `openspec:<change-name>` is supported for this release. Read `references/providers/openspec.md` before deriving or validating an OpenSpec ref.
@@ -23,7 +27,7 @@ If the user provides any other prefix, stop before task creation and report the 
 0. **Read client config** - read `hermes-board.json` from the repo root.
    - Prefer explicit user values over env vars, env vars over config, config over derived repo slug.
    - Use `project.slug` as the default `project`, `project.board` as the default `board`, and `repo.url` or a matching alias as the optional `repo` argument.
-   - If the file is absent, derive a likely project slug from `git remote get-url origin` and ask before relying on it.
+   - If the file is absent, derive a likely project slug from `git remote get-url origin` and use it. Only ask if there is genuine ambiguity (multiple remotes, no remote).
 1. **Resolve the spec reference**.
    - If the user supplied a provider-prefixed reference, validate the prefix before continuing.
    - If the user named a provider without a full ref, load that provider reference and derive the `spec_ref`.
@@ -37,8 +41,9 @@ If the user provides any other prefix, stop before task creation and report the 
    - Do not push automatically.
 3. **Check worker reachability**.
    - Resolve `base_branch` from the current branch and `base_commit` from `HEAD`.
-   - Verify `base_commit` is reachable from a remote branch, or ask the user for an explicit reachable ref.
-   - If the commit is not reachable, stop before dispatch.
+   - Verify `base_commit` is reachable from a remote branch.
+   - If not reachable, report the blocker concisely: `"HEAD is not pushed. Run git push, then re-run /hb-deploy <name>."` — stop.
+   - Do not ask the user for an alternative ref unless they explicitly said to use a different commit.
 4. **Dispatch through MCP** - call `hb_import_spec` with:
    - `spec_ref`
    - `project` or `repo`
@@ -53,7 +58,12 @@ If the user provides any other prefix, stop before task creation and report the 
 
 ## External Actions
 
-Creating a local commit requires user approval after showing the relevant diff. Pushing, publishing, merging, changing credentials, or dispatching anything outside the requested MCP task creation requires explicit user approval.
+The dispatch itself (`hb_import_spec`) does NOT require confirmation — that IS the action the user requested.
+
+Only these side-effects require approval:
+- Creating a local commit (show the scoped diff first)
+- Pushing to remote
+- Publishing, merging, or changing credentials
 
 ## Prerequisites
 

@@ -62,6 +62,15 @@ echo "HERMES_KANBAN_API_URL=http://127.0.0.1:9119/api/plugins/kanban" >> /etc/he
 # echo "HERMES_KANBAN_API_ALLOW_REMOTE=1" >> /etc/hermes/hermes-board-mcp.env
 ```
 
+### Project-by-repo cache
+
+When resolving projects by repository URL (`resolveProjectByRepo`), results are cached for 60 seconds to avoid repeated filesystem scans. The cache is cleared when the server process exits.
+
+### Platform notes
+
+- **SIGHUP hot-reload** (auth tokens and policy): Supported on Linux/macOS only. On Windows, SIGHUP is not available; restart the server to reload configuration.
+- **Policy glob patterns**: Tool lists in `policy.yaml` support `*` and `?` wildcards (e.g., `hb_list_*` matches all list tools).
+
 ## Verify
 
 ```bash
@@ -122,3 +131,4 @@ curl -H "Authorization: Bearer $TOKEN" https://hermes-board-mcp.$HERMES_VPS_DOMA
 | Slow kanban operations | Dashboard plugin unavailable; CLI fallback used | Start `hermes dashboard` or check `HERMES_KANBAN_API_URL` |
 | `hb_import_spec` rejects dispatch | Missing `base_commit` or commit not reachable from remote | Ensure the spec is committed and pushed to a reachable ref |
 | Unknown spec provider | Prefix is not release-ready | Use `openspec:` for this release |
+| SIGHUP has no effect | Running on Windows | Restart the server process to reload auth/policy config |

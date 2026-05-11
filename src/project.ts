@@ -16,6 +16,14 @@ export interface ProjectMeta {
 }
 
 const PROJECTS_BASE = process.env.HERMES_PROJECTS_BASE || '/opt/hermes/projects';
+const REPO_CACHE_TTL_MS = 60_000;
+
+interface RepoCacheEntry {
+  result: (ProjectMeta & { board: string }) | null;
+  ts: number;
+}
+
+const _repoCache = new Map<string, RepoCacheEntry>();
 
 export function resolveProject(boardSlug?: string | null): ProjectMeta | null {
   if (!boardSlug) return null;
@@ -62,6 +70,18 @@ export function normalizeRepoUrl(url: string): string {
  */
 export function resolveProjectByRepo(urlOrAlias: string): ProjectMeta & { board: string } | null {
   const target = normalizeRepoUrl(urlOrAlias);
+
+  const cached = _repoCache.get(target);
+  if (cached && Date.now() - cached.ts < REPO_CACHE_TTL_MS) {
+    return cached.result;
+  }
+
+  const result = _resolveProjectByRepoUncached(target);
+  _repoCache.set(target, { result, ts: Date.now() });
+  return result;
+}
+
+function _resolveProjectByRepoUncached(target: string): (ProjectMeta & { board: string }) | null {
 
   try {
     const entries = readdirSync(PROJECTS_BASE, { withFileTypes: true });

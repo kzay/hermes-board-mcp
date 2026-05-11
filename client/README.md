@@ -52,13 +52,21 @@ cp node_modules/@kzay/hermes-board-skills/hermes-board-mcp.example.json .cursor/
 cp node_modules/@kzay/hermes-board-skills/hermes-board.example.json hermes-board.json
 ```
 
-4. Set your bearer token as an environment variable:
+4. Set your bearer token as a **system environment variable** (`.env` files are not supported by Cursor for HTTP/SSE MCP servers):
 
-```bash
-export BOARD_MCP_TOKEN="your-token-here"
-```
+   **macOS / Linux (shell):**
+   ```bash
+   export HERMES_BOARD_MCP_TOKEN="your-token-here"
+   ```
 
-Get a token from your VPS operator or generate one on the server with:
+   **Windows (PowerShell, user-scoped):**
+   ```powershell
+   [System.Environment]::SetEnvironmentVariable("HERMES_BOARD_MCP_TOKEN", "your-token-here", "User")
+   ```
+
+   Restart Cursor after setting the variable so it is available to the MCP client.
+
+   Get a token from your VPS operator or generate one on the server with:
 
 ```bash
 TOKEN=$(openssl rand -hex 24)
@@ -95,11 +103,12 @@ The release skill names use the `hb-*` prefix. Older OpenSpec-named entry points
 
 | Issue | Cause | Fix |
 |-------|-------|-----|
-| `401 Unauthorized` | Wrong or missing token | Check `BOARD_MCP_TOKEN` matches a server token |
+| `401 Unauthorized` | Wrong or missing token | Check `HERMES_BOARD_MCP_TOKEN` matches a server token |
 | `Connection refused` | Server not running | Verify the `/health` endpoint returns 200 |
 | Skills not appearing | postinstall did not run | Run `npx hermes-board-skills-setup` |
 | `ENOTFOUND` | Wrong domain in MCP config | Check `.cursor/mcp.json` URL |
 | MCP tools not listed | MCP config missing or malformed | Re-copy `hermes-board-mcp.example.json` and merge carefully |
+| `envFile` / `.env` ignored | Cursor does not support `.env` for HTTP/SSE servers | Set `HERMES_BOARD_MCP_TOKEN` as a system environment variable and restart Cursor |
 
 ## Related
 

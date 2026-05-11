@@ -10,6 +10,21 @@ import { runCommand } from './command-runner.js';
 const DEFAULT_API_URL = 'http://127.0.0.1:9119/api/plugins/kanban';
 const FAILURE_CACHE_MS = 30_000;
 
+export class RestError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly statusText: string,
+    public readonly url: string,
+    public readonly method: string,
+  ) {
+    super(`${method} ${url} → ${status} ${statusText}`);
+    this.name = 'RestError';
+  }
+
+  get isClientError(): boolean { return this.status >= 400 && this.status < 500; }
+  get isServerError(): boolean { return this.status >= 500; }
+}
+
 interface FailureEntry {
   timestamp: number;
 }
@@ -92,13 +107,16 @@ export class HermesKanbanClient {
     try {
       const res = await fetch(url, fetchOpts);
       if (!res.ok) {
-        throw new Error(`${method} ${url} → ${res.status}`);
+        throw new RestError(res.status, res.statusText, url.toString(), method);
       }
       const data = await res.json() as unknown;
       this.failureCache.clear();
       this.restUsed = true;
       return data;
     } catch (err) {
+      if (err instanceof RestError && err.isClientError) {
+        throw err;
+      }
       this.failureCache.recordFailure();
       if (!this.warnedOnce) {
         this.warnedOnce = true;
@@ -119,5 +137,9 @@ export class HermesKanbanClient {
 
   private isLoopback(hostname: string): boolean {
     return hostname === '127.0.0.1' || hostname === 'localhost' || hostname === '::1';
+  }
+
+  dispose(): void {
+    this.failureCache.clear();
   }
 }

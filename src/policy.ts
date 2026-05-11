@@ -43,10 +43,12 @@ function loadPolicy() {
 
 export function initPolicy() {
   loadPolicy();
-  process.on('SIGHUP', () => {
-    console.log('[policy] SIGHUP received — reloading policy');
-    loadPolicy();
-  });
+  if (process.platform !== 'win32') {
+    process.on('SIGHUP', () => {
+      console.log('[policy] SIGHUP received — reloading policy');
+      loadPolicy();
+    });
+  }
 }
 
 export class PolicyViolationError extends Error {
@@ -62,6 +64,21 @@ export class PolicyViolationError extends Error {
 }
 
 /**
+ * Simple glob match supporting `*` (any chars) and `?` (single char).
+ * Used for policy tool-list patterns like `hb_*` or `hb_list_?`.
+ */
+export function globMatch(pattern: string, value: string): boolean {
+  if (!pattern.includes('*') && !pattern.includes('?')) {
+    return pattern === value;
+  }
+  const escaped = pattern
+    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+    .replace(/\*/g, '.*')
+    .replace(/\?/g, '.');
+  return new RegExp(`^${escaped}$`).test(value);
+}
+
+/**
  * Check if a profile has access to a tool.
  * Throws PolicyViolationError on denial.
  */
@@ -72,7 +89,12 @@ export function checkAccess(profile: string, toolName: string): void {
   }
 
   const allowed = profileConfig.tools || [];
-  if (!allowed.includes(toolName)) {
+  const matched = allowed.some(entry =>
+    entry.includes('*') || entry.includes('?')
+      ? globMatch(entry, toolName)
+      : entry === toolName
+  );
+  if (!matched) {
     throw new PolicyViolationError(profile, toolName);
   }
 }

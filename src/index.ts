@@ -12,10 +12,14 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import http from 'http';
 import crypto from 'crypto';
-import { toolDefs } from './tools.js';
+import { createRequire } from 'module';
+import { toolDefs, client } from './tools.js';
 import { initPolicy, checkAccess, PolicyViolationError } from './policy.js';
 import { authenticateRequest, initAuth } from './auth.js';
 import { initSpecProviders } from './spec-providers/index.js';
+
+const _require = createRequire(import.meta.url);
+const pkg = _require('../../package.json') as { version: string };
 
 const PORT = parseInt(process.env.PORT || '7332', 10);
 const SESSION_TTL_MS = 30 * 60 * 1000; // 30 min
@@ -46,7 +50,7 @@ function pruneExpiredSessions() {
 function createMcpServer(profile: string) {
   const server = new McpServer({
     name: 'hermes-board-mcp',
-    version: '3.0.0',
+    version: pkg.version,
   });
 
   for (const tool of toolDefs) {
@@ -60,6 +64,10 @@ function createMcpServer(profile: string) {
       }
     );
   }
+
+  server.server.onclose = () => {
+    client.dispose();
+  };
 
   return server;
 }
@@ -89,6 +97,13 @@ const httpServer = http.createServer(async (req, res) => {
     }
 
     const profile = authResult.profile || req.headers['x-hermes-profile'] || 'default';
+
+    // Cursor compatibility: inject Accept header so StreamableHTTPServerTransport
+    // doesn't reject requests that don't advertise text/event-stream.
+    const accept = req.headers['accept'];
+    if (!accept || (typeof accept === 'string' && !accept.includes('text/event-stream'))) {
+      req.headers['accept'] = 'application/json, text/event-stream';
+    }
 
     if (req.method === 'POST') {
       const existingSessionId = req.headers['mcp-session-id'];
@@ -127,8 +142,13 @@ const httpServer = http.createServer(async (req, res) => {
         }
       } catch (err) {
         if (!res.headersSent) {
-          res.writeHead(500, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: (err as Error).message }));
+          if (err instanceof PolicyViolationError) {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: err.message, code: 'POLICY_DENIED' }));
+          } else {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: (err as Error).message }));
+          }
         }
         console.error('[hermes-board-mcp] error handling POST:', (err as Error).message);
       }

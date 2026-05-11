@@ -6,10 +6,10 @@
  */
 import { z } from 'zod';
 import { resolveProject, resolveProjectByRepo } from './project.js';
-import { HermesKanbanClient } from './hermes-client.js';
+import { HermesKanbanClient, RestError } from './hermes-client.js';
 import { resolveProvider } from './spec-providers/registry.js';
 
-const client = new HermesKanbanClient();
+export const client = new HermesKanbanClient();
 
 export const VALID_STATUSES = ['triage', 'todo', 'ready', 'running', 'blocked', 'done', 'archived'] as const;
 
@@ -36,7 +36,12 @@ async function tryRestThenCli<T>(
 ): Promise<T> {
   try {
     return await restCall() as T;
-  } catch {
+  } catch (err) {
+    if (err instanceof RestError && err.isClientError) {
+      throw err;
+    }
+    const classification = err instanceof RestError ? `HTTP ${err.status}` : 'network error';
+    console.warn(`[hermes-board-mcp] REST failed (${classification}), falling back to CLI`);
     return await cliCall() as T;
   }
 }
@@ -242,7 +247,9 @@ export const toolDefs: ToolDef[] = [
     },
     async handler(args) {
       const board = args.board ? String(args.board) : undefined;
-      const taskId = String(args.task_id);
+      const rawId = String(args.task_id);
+      const numericId = Number(rawId);
+      const taskId = Number.isFinite(numericId) && numericId > 0 ? String(numericId) : rawId;
       const query = board ? { board } : undefined;
 
       const restPromise = () => client.tryRest('GET', `/tasks/${taskId}`, undefined, query);
@@ -250,8 +257,6 @@ export const toolDefs: ToolDef[] = [
       const cliPromise = () => client.cliFallback(cliArgs);
 
       const result = await tryRestThenCli(restPromise, cliPromise);
-      // CLI returns { task: {...}, parents: [], children: [], events: [...] }
-      // Extract the task for a cleaner API surface
       if (result && typeof result === 'object' && 'task' in result) {
         return textResult((result as Record<string, unknown>).task);
       }
@@ -315,7 +320,9 @@ export const toolDefs: ToolDef[] = [
     },
     async handler(args) {
       const board = String(args.board);
-      const taskId = String(args.task_id);
+      const rawId = String(args.task_id);
+      const numericId = Number(rawId);
+      const taskId = Number.isFinite(numericId) && numericId > 0 ? String(numericId) : rawId;
       const summary = args.summary ? String(args.summary) : undefined;
       const result = args.result ? String(args.result) : undefined;
 
@@ -645,7 +652,10 @@ export const toolDefs: ToolDef[] = [
     description: 'Create a kanban task from any spec provider. The provider is selected by the spec_ref prefix (e.g. "openspec:change-name", "speckit:feature/42"). The worker receives full Git context and derives spec_path from spec_ref.',
     inputSchema: {
       spec_ref: z.string().describe('Spec reference with provider prefix, e.g. "openspec:add-dark-mode"'),
-      base_commit: z.string().describe('Full Git commit hash required for worker checkout'),
+      base_commit: z.string().describe('Full Git commit hash required for worker checkout').refine(
+        (v) => /^[0-9a-f]{7,40}$/i.test(v),
+        { message: 'base_commit must be a 7-40 character hex string' }
+      ),
       board: z.string().optional().describe('Target board slug; optional if project or repo resolves a board'),
       project: z.string().optional().describe('Project slug for routing'),
       repo: z.string().optional().describe('Repo URL or alias for routing'),
@@ -691,6 +701,9 @@ export const toolDefs: ToolDef[] = [
       if (!repoUrl && projectSlug) {
         const meta = resolveProject(projectSlug);
         if (meta) repoUrl = meta.repo_url;
+      }
+      if (!repoUrl && args.repo) {
+        repoUrl = String(args.repo);
       }
       if (!repoUrl) return errorResult('Could not determine repo_url for the project');
 

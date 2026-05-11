@@ -40,10 +40,12 @@ function loadTokens() {
 
 export function initAuth() {
   loadTokens();
-  process.on('SIGHUP', () => {
-    console.log('[auth] SIGHUP received — reloading tokens');
-    loadTokens();
-  });
+  if (process.platform !== 'win32') {
+    process.on('SIGHUP', () => {
+      console.log('[auth] SIGHUP received — reloading tokens');
+      loadTokens();
+    });
+  }
 }
 
 function isLoopback(req: IncomingMessage): boolean {

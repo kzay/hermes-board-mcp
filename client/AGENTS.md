@@ -65,16 +65,26 @@ Set `project.slug`, `project.board`, `repo.url`, and any repo aliases. Keep `def
 
 ### Token
 
-Set the `BOARD_MCP_TOKEN` environment variable:
+Set your bearer token as a **system environment variable** (`envFile` / `.env` is not supported by Cursor for HTTP/SSE MCP servers):
 
+**macOS / Linux (shell):**
 ```bash
-export BOARD_MCP_TOKEN="your-bearer-token-here"
+export HERMES_BOARD_MCP_TOKEN="your-token-here"
 ```
 
-If the token is not available, inform the user:
+**Windows (PowerShell, user-scoped):**
+```powershell
+[System.Environment]::SetEnvironmentVariable("HERMES_BOARD_MCP_TOKEN", "your-token-here", "User")
+```
 
-> A `BOARD_MCP_TOKEN` is required to connect to the Hermes Board MCP server.
-> Generate one on the VPS with `openssl rand -hex 24`, then add it to the server's `BOARD_MCP_TOKENS` env var.
+Restart Cursor after setting the variable so it is available to the MCP client.
+
+Generate a token on the server with:
+
+```bash
+openssl rand -hex 24
+# Add the generated token to the server's BOARD_MCP_TOKENS env var.
+```
 
 ## Verify
 
@@ -98,8 +108,9 @@ If you get connection refused, the server is not running or the URL is wrong.
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| `401 Unauthorized` | Token mismatch | Verify `BOARD_MCP_TOKEN` matches a token in `BOARD_MCP_TOKENS` |
+| `401 Unauthorized` | Token mismatch | Verify `HERMES_BOARD_MCP_TOKEN` matches a token in `BOARD_MCP_TOKENS` |
 | `Connection refused` | Server not running or wrong URL | Verify `/health` returns 200 |
 | Skills not in Cursor | postinstall did not run | Run `npx hermes-board-skills-setup` |
 | `ENOTFOUND` | Wrong domain in `.cursor/mcp.json` | Check the URL matches the VPS domain |
 | MCP tools not listed | `.cursor/mcp.json` missing or malformed | Re-copy the example config and merge carefully |
+| `.env` token not loaded | Cursor ignores `.env` for HTTP/SSE servers | Set `HERMES_BOARD_MCP_TOKEN` as a system environment variable and restart Cursor |

@@ -69,7 +69,23 @@ Environment Variables:
   process.exit(0);
 }
 
-const positionalArgs = args.filter(a => !a.startsWith('--') && a !== port && a !== policyFile && a !== envFile);
+const KNOWN_FLAGS = new Set(['--port', '--policy-file', '--env-file', '--version', '-v', '--help', '-h']);
+const VALUED_FLAGS = new Set(['--port', '--policy-file', '--env-file']);
+
+const unknownFlags = args.filter(a => a.startsWith('-') && !KNOWN_FLAGS.has(a));
+if (unknownFlags.length > 0) {
+  console.error(`Unknown flag(s): ${unknownFlags.join(', ')}\nRun with --help for usage.`);
+  process.exit(1);
+}
+
+const positionalArgs = args.filter(a => {
+  if (a.startsWith('-')) return false;
+  for (const vf of VALUED_FLAGS) {
+    const idx = args.indexOf(vf);
+    if (idx !== -1 && args[idx + 1] === a) return false;
+  }
+  return true;
+});
 const command = positionalArgs[0] || 'start';
 
 if (command === 'start') {

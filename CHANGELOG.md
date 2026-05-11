@@ -1,6 +1,32 @@
 # Changelog
 
+## Unreleased - Code review fixes
+
+### Fixed
+- `hb_import_spec`: When `board` is provided directly, `args.repo` is now used as a fallback repo URL if no `factory-project.yaml` exists on disk.
+- Server version string now reads from `package.json` instead of a hardcoded value.
+- `hb_show_task` / `hb_complete_task`: Defensive numeric parsing for `task_id` to handle string-vs-number coercion.
+- `base_commit` input validated with a Zod refinement to reject non-hex values at schema level.
+- `tryRestThenCli`: Client errors (4xx) are now re-thrown directly instead of silently falling through to CLI fallback.
+- SIGHUP handlers in `auth.ts` and `policy.ts` are now guarded with `process.platform !== 'win32'` to prevent crashes on Windows.
+- CLI argument parser rejects unknown flags with a clear error message.
+
+### Added
+- `RestError` class in `hermes-client.ts` for typed HTTP error handling with `isClientError` / `isServerError` classification.
+- `dispose()` method on `HermesKanbanClient` for clean resource teardown; wired to server close event.
+- `globMatch()` helper in `policy.ts` supporting `*` and `?` wildcards in policy tool lists.
+- `resolveProjectByRepo` results cached for 60 seconds to avoid repeated filesystem scans.
+- PolicyViolationError now returns HTTP 403 (was generic 500).
+- New test suites: `RestError`, `HermesKanbanClient.dispose()`, `globMatch`, tool input schema validation, REST fallback classification.
+
+### Documentation
+- `AGENTS.md`: Documented project-by-repo cache TTL, Windows SIGHUP limitation, and policy glob patterns.
+
 ## 3.3.1 - Public production release hardening
+
+### Fixed
+- Server-side compatibility shim for Cursor IDE MCP client. Injects `Accept: application/json, text/event-stream` header on incoming `/mcp` requests when the client doesn't advertise SSE support, preventing 406 errors during initialization handshake.
+- Client package configuration: Fixed `hermes-board-mcp.example.json` to use `${env:HERMES_BOARD_MCP_TOKEN}` (was `${BOARD_MCP_TOKEN}` without `env:` prefix, causing silent empty tokens). Updated README and AGENTS docs to clarify that Cursor does not support `.env` / `envFile` for HTTP/SSE MCP servers — users must set `HERMES_BOARD_MCP_TOKEN` as a system environment variable and restart Cursor.
 
 ### Client Skills
 - Added frontmatter routing metadata to the canonical `hb-*` skills.
