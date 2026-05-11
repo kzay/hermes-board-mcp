@@ -23,6 +23,8 @@ export class RestError extends Error {
 
   get isClientError(): boolean { return this.status >= 400 && this.status < 500; }
   get isServerError(): boolean { return this.status >= 500; }
+  /** 401/403 — auth issue, not a request error; CLI fallback should still work */
+  get isAuthError(): boolean { return this.status === 401 || this.status === 403; }
 }
 
 interface FailureEntry {
@@ -56,6 +58,7 @@ export class HermesKanbanClient {
   private failureCache = new RestFailureCache();
   private baseUrl: string;
   private allowRemote: boolean;
+  private apiToken: string | undefined;
   private warnedOnce = false;
   /** Set to true after the first successful REST call in this process */
   public restUsed = false;
@@ -63,6 +66,7 @@ export class HermesKanbanClient {
   constructor() {
     this.baseUrl = (process.env.HERMES_KANBAN_API_URL || DEFAULT_API_URL).replace(/\/$/, '');
     this.allowRemote = process.env.HERMES_KANBAN_API_ALLOW_REMOTE === '1';
+    this.apiToken = process.env.HERMES_KANBAN_API_TOKEN || undefined;
   }
 
   /**
@@ -98,7 +102,10 @@ export class HermesKanbanClient {
 
     const fetchOpts: RequestInit = {
       method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(this.apiToken ? { Authorization: `Bearer ${this.apiToken}` } : {}),
+      },
     };
     if (body !== undefined && method !== 'GET' && method !== 'DELETE') {
       fetchOpts.body = JSON.stringify(body);
@@ -114,7 +121,7 @@ export class HermesKanbanClient {
       this.restUsed = true;
       return data;
     } catch (err) {
-      if (err instanceof RestError && err.isClientError) {
+      if (err instanceof RestError && err.isClientError && !err.isAuthError) {
         throw err;
       }
       this.failureCache.recordFailure();

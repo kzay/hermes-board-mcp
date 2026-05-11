@@ -7,12 +7,14 @@
 - Server version string now reads from `package.json` instead of a hardcoded value.
 - `hb_show_task` / `hb_complete_task`: Defensive numeric parsing for `task_id` to handle string-vs-number coercion.
 - `base_commit` input validated with a Zod refinement to reject non-hex values at schema level.
-- `tryRestThenCli`: Client errors (4xx) are now re-thrown directly instead of silently falling through to CLI fallback.
+- `tryRestThenCli`: Non-auth client errors (4xx excluding 401/403) are re-thrown directly; **401/403 (auth errors) still fall back to CLI** so environments where the dashboard requires auth work correctly.
+- `RestError.isAuthError` (401/403) introduced to distinguish auth failures from request errors — prevents e2e failures when dashboard REST requires authentication.
+- `HERMES_KANBAN_API_TOKEN` env var: when set, the client sends `Authorization: Bearer <token>` on every dashboard REST call, enabling use of an authenticated dashboard instead of falling back to CLI.
 - SIGHUP handlers in `auth.ts` and `policy.ts` are now guarded with `process.platform !== 'win32'` to prevent crashes on Windows.
 - CLI argument parser rejects unknown flags with a clear error message.
 
 ### Added
-- `RestError` class in `hermes-client.ts` for typed HTTP error handling with `isClientError` / `isServerError` classification.
+- `RestError` class in `hermes-client.ts` for typed HTTP error handling with `isClientError` / `isServerError` / `isAuthError` classification.
 - `dispose()` method on `HermesKanbanClient` for clean resource teardown; wired to server close event.
 - `globMatch()` helper in `policy.ts` supporting `*` and `?` wildcards in policy tool lists.
 - `resolveProjectByRepo` results cached for 60 seconds to avoid repeated filesystem scans.

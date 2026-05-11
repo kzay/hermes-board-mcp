@@ -62,6 +62,15 @@ echo "HERMES_KANBAN_API_URL=http://127.0.0.1:9119/api/plugins/kanban" >> /etc/he
 # echo "HERMES_KANBAN_API_ALLOW_REMOTE=1" >> /etc/hermes/hermes-board-mcp.env
 ```
 
+If the dashboard requires authentication, set the API token:
+
+```bash
+echo "HERMES_KANBAN_API_TOKEN=your-dashboard-token" >> /etc/hermes/hermes-board-mcp.env
+```
+
+This token is sent as `Authorization: Bearer <token>` on every REST call to the dashboard.
+Without this token, the MCP server falls back to CLI automatically when the dashboard returns 401.
+
 ### Project-by-repo cache
 
 When resolving projects by repository URL (`resolveProjectByRepo`), results are cached for 60 seconds to avoid repeated filesystem scans. The cache is cleared when the server process exits.
@@ -129,6 +138,7 @@ curl -H "Authorization: Bearer $TOKEN" https://hermes-board-mcp.$HERMES_VPS_DOMA
 | Policy denies all tools | Profile not in policy file | Add the profile to `policy.yaml`, send SIGHUP |
 | Health returns 401 | Auth required but no token sent | Loopback should bypass unless `BOARD_MCP_REQUIRE_AUTH=always` |
 | Slow kanban operations | Dashboard plugin unavailable; CLI fallback used | Start `hermes dashboard` or check `HERMES_KANBAN_API_URL` |
+| Slow kanban operations (dashboard running but ignored) | Dashboard requires auth and `HERMES_KANBAN_API_TOKEN` not set | Set `HERMES_KANBAN_API_TOKEN` in the env file; server falls back to CLI when it receives 401 |
 | `hb_import_spec` rejects dispatch | Missing `base_commit` or commit not reachable from remote | Ensure the spec is committed and pushed to a reachable ref |
 | Unknown spec provider | Prefix is not release-ready | Use `openspec:` for this release |
 | SIGHUP has no effect | Running on Windows | Restart the server process to reload auth/policy config |

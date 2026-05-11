@@ -37,7 +37,7 @@ async function tryRestThenCli<T>(
   try {
     return await restCall() as T;
   } catch (err) {
-    if (err instanceof RestError && err.isClientError) {
+    if (err instanceof RestError && err.isClientError && !err.isAuthError) {
       throw err;
     }
     const classification = err instanceof RestError ? `HTTP ${err.status}` : 'network error';
