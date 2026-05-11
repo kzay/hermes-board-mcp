@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.3.4 - 2026-05-11
+
+### Fixed
+- `hb_add_comment`: Removed unsupported `--json` flag from CLI fallback args for `hermes kanban comment`.
+
 ## 3.3.2 - 2026-05-10
 
 ### Fixed

@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.3.4 - 2026-05-11
+
+- Version bump to align with server fix (no client changes).
+
 ## 3.3.1 - Skill packaging hardening
 
 - Added skill frontmatter routing metadata for all canonical `hb-*` skills.

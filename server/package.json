@@ -1,6 +1,6 @@
 {
   "name": "@kzay/hermes-board-mcp",
-  "version": "3.3.3",
+  "version": "3.3.4",
   "description": "Standalone MCP server exposing kanban and OpenSpec tools for the Hermes board system",
   "type": "module",
   "main": "dist/src/index.js",
