@@ -20,13 +20,17 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: '20'
-          cache: npm
           registry-url: https://registry.npmjs.org
       - run: npm ci
+        working-directory: server
       - run: npm test
+        working-directory: server
       - run: npm run release:check
+        working-directory: server
       - run: npm audit --omit=dev
+        working-directory: server
       - run: npm publish --access public --tag "${{ inputs.npm_tag }}" --provenance
+        working-directory: server
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: npm publish --access public --tag "${{ inputs.npm_tag }}" --provenance

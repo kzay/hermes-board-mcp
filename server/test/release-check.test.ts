@@ -86,19 +86,20 @@ describe('release readiness checks', () => {
 
   it('detects version drift in release metadata and active docs', () => {
     const root = mkdtempSync(join(tmpdir(), 'hb-version-check-'));
+    mkdirSync(join(root, 'server'), { recursive: true });
     mkdirSync(join(root, 'client'), { recursive: true });
 
-    writeFileSync(join(root, 'package.json'), JSON.stringify({ version: '3.3.0' }), 'utf8');
+    writeFileSync(join(root, 'server', 'package.json'), JSON.stringify({ version: '3.3.0' }), 'utf8');
     writeFileSync(join(root, 'client', 'package.json'), JSON.stringify({ version: '3.2.0' }), 'utf8');
     writeFileSync(
-      join(root, 'package-lock.json'),
+      join(root, 'server', 'package-lock.json'),
       JSON.stringify({ version: '3.2.0', packages: { '': { version: '3.2.0' } } }),
       'utf8'
     );
     writeFileSync(join(root, 'README.md'), '# hermes-board-mcp v3.2\n', 'utf8');
 
     const errors = validateReleaseMetadata(root);
-    assert.match(errors.join('\n'), /Root and client package versions must match/);
+    assert.match(errors.join('\n'), /Server and client package versions must match/);
     assert.match(errors.join('\n'), /package-lock\.json version must match/);
     assert.match(errors.join('\n'), /Stale active release version in README\.md/);
   });

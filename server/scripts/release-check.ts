@@ -32,7 +32,8 @@ const ACTIVE_RELEASE_DOCS = [
   'README.md',
   'AGENTS.md',
   'CLAUDE.md',
-  'policy.yaml',
+  'server/AGENTS.md',
+  'server/policy.yaml',
   'client/README.md',
   'client/AGENTS.md',
 ] as const;
@@ -44,6 +45,7 @@ const SCAN_ROOTS = [
   'README.md',
   'AGENTS.md',
   'CLAUDE.md',
+  'server/AGENTS.md',
   'client',
   'openspec/specs',
 ] as const;
@@ -165,29 +167,29 @@ export function validateRootPackFiles(files: string[]): string[] {
 
 export function validateReleaseMetadata(root: string): string[] {
   const errors: string[] = [];
-  const rootPackagePath = join(root, 'package.json');
+  const serverPackagePath = join(root, 'server', 'package.json');
   const clientPackagePath = join(root, 'client', 'package.json');
-  const lockPath = join(root, 'package-lock.json');
+  const lockPath = join(root, 'server', 'package-lock.json');
 
-  const rootPackage = readJsonFile(rootPackagePath) as { version?: unknown };
+  const serverPackage = readJsonFile(serverPackagePath) as { version?: unknown };
   const clientPackage = readJsonFile(clientPackagePath) as { version?: unknown };
-  const rootVersion = typeof rootPackage.version === 'string' ? rootPackage.version : '';
+  const serverVersion = typeof serverPackage.version === 'string' ? serverPackage.version : '';
   const clientVersion = typeof clientPackage.version === 'string' ? clientPackage.version : '';
 
-  if (!rootVersion) errors.push('Root package.json must define a version');
+  if (!serverVersion) errors.push('Server package.json must define a version');
   if (!clientVersion) errors.push('Client package.json must define a version');
-  if (rootVersion && clientVersion && rootVersion !== clientVersion) {
-    errors.push(`Root and client package versions must match: ${rootVersion} !== ${clientVersion}`);
+  if (serverVersion && clientVersion && serverVersion !== clientVersion) {
+    errors.push(`Server and client package versions must match: ${serverVersion} !== ${clientVersion}`);
   }
 
   if (existsSync(lockPath)) {
     const lock = readJsonFile(lockPath) as { version?: unknown; packages?: Record<string, { version?: unknown }> };
-    if (lock.version !== rootVersion) {
-      errors.push(`package-lock.json version must match package.json: ${String(lock.version)} !== ${rootVersion}`);
+    if (lock.version !== serverVersion) {
+      errors.push(`package-lock.json version must match package.json: ${String(lock.version)} !== ${serverVersion}`);
     }
-    const rootLockPackage = lock.packages?.[''];
-    if (rootLockPackage?.version !== rootVersion) {
-      errors.push(`package-lock root package version must match package.json: ${String(rootLockPackage?.version)} !== ${rootVersion}`);
+    const serverLockPackage = lock.packages?.[''];
+    if (serverLockPackage?.version !== serverVersion) {
+      errors.push(`package-lock root package version must match package.json: ${String(serverLockPackage?.version)} !== ${serverVersion}`);
     }
   }
 
@@ -386,7 +388,7 @@ function runRootPackCheck(root: string): string[] {
     ? ['/c', 'npm', 'pack', '--dry-run']
     : ['pack', '--dry-run'];
   const result = spawnSync(command, args, {
-    cwd: root,
+    cwd: join(root, 'server'),
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -417,7 +419,7 @@ export function runReleaseChecks(root: string): string[] {
 }
 
 function repoRootFromScript(): string {
-  return fileURLToPath(new URL('../..', import.meta.url));
+  return fileURLToPath(new URL('../../..', import.meta.url));
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {

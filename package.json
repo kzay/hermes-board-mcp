@@ -1,63 +1,16 @@
 {
-  "name": "@kzay/hermes-board-mcp",
-  "version": "3.3.2",
-  "description": "Standalone MCP server exposing kanban and OpenSpec tools for the Hermes board system",
-  "type": "module",
-  "main": "dist/src/index.js",
-  "bin": {
-    "hermes-board-mcp": "dist/src/cli.js"
-  },
-  "files": [
-    "dist/src",
-    "policy.yaml",
-    "hermes-board-mcp.service",
-    "README.md",
-    "AGENTS.md",
-    "CLAUDE.md",
-    "CHANGELOG.md",
-    "LICENSE"
-  ],
+  "name": "@kzay/hermes-board",
+  "private": true,
+  "description": "Hermes board monorepo — MCP server (server/) and client skills (client/)",
   "scripts": {
-    "build": "tsc",
-    "dev": "tsx src/cli.ts start",
-    "test:unit": "npm run build && node --test dist/test/auth.test.js dist/test/policy.test.js dist/test/project.test.js dist/test/spec-provider-registry.test.js dist/test/openspec-provider.test.js dist/test/hb-import-spec.test.js dist/test/release-check.test.js dist/test/client-postinstall.test.js dist/test/hermes-client.test.js dist/test/tool-validation.test.js dist/test/rest-fallback.test.js",
-    "test": "npm run test:unit",
-    "test:e2e:up": "docker compose -f docker-compose.e2e.yml up --build -d",
-    "test:e2e": "npm run build && docker compose -f docker-compose.e2e.yml run --rm client",
-    "test:e2e:down": "docker compose -f docker-compose.e2e.yml down",
-    "test:e2e:reset": "npm run build && node dist/scripts/reset-e2e.js",
-    "release:check": "npm run build && node dist/scripts/release-check.js",
-    "typecheck": "tsc --noEmit",
-    "prepublishOnly": "npm test"
-  },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.12.0",
-    "js-yaml": "^4.1.0",
-    "zod": "^4.4.3"
-  },
-  "engines": {
-    "node": ">=20.0.0"
-  },
-  "keywords": [
-    "mcp",
-    "hermes",
-    "kanban",
-    "openspec",
-    "board"
-  ],
-  "license": "MIT",
-  "publishConfig": {
-    "access": "public"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/kzay/hermes-board-mcp.git",
-    "directory": "."
-  },
-  "devDependencies": {
-    "@types/js-yaml": "^4.0.9",
-    "@types/node": "^25.6.2",
-    "tsx": "^4.21.0",
-    "typescript": "^6.0.3"
+    "build": "npm run build --prefix server",
+    "test": "npm run test --prefix server",
+    "test:unit": "npm run test:unit --prefix server",
+    "test:e2e": "npm run test:e2e --prefix server",
+    "test:e2e:up": "npm run test:e2e:up --prefix server",
+    "test:e2e:down": "npm run test:e2e:down --prefix server",
+    "test:e2e:reset": "npm run test:e2e:reset --prefix server",
+    "release:check": "npm run release:check --prefix server",
+    "typecheck": "npm run typecheck --prefix server"
   }
 }

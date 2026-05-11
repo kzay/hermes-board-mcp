@@ -2,22 +2,22 @@ FROM node:20-slim AS builder
 
 WORKDIR /app
 
-COPY package.json package-lock.json* tsconfig.json ./
+COPY server/package.json server/package-lock.json* server/tsconfig.json ./
 RUN npm ci
 
-COPY src/ src/
-COPY policy.yaml .
+COPY server/src/ src/
+COPY server/policy.yaml .
 RUN npm run build
 
 FROM node:20-slim
 
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
+COPY server/package.json server/package-lock.json* ./
 RUN npm ci --omit=dev 2>/dev/null || npm install --omit=dev
 
 COPY --from=builder /app/dist /app/dist
-COPY policy.yaml .
+COPY server/policy.yaml .
 
 ENV PORT=7332
 ENV PATH="/root/.local/bin:$PATH"

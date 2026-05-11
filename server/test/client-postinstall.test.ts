@@ -8,7 +8,7 @@ import { fileURLToPath } from 'url';
 
 describe('client postinstall', () => {
   it('copies nested skill reference files without requiring manual copy steps', () => {
-    const root = fileURLToPath(new URL('../..', import.meta.url));
+    const root = fileURLToPath(new URL('../../..', import.meta.url));
     const tmp = mkdtempSync(join(tmpdir(), 'hb-client-install-'));
     const env = { ...process.env };
     delete env.INIT_CWD;
@@ -28,7 +28,7 @@ describe('client postinstall', () => {
   });
 
   it('uses INIT_CWD as the target project during npm lifecycle installs', () => {
-    const root = fileURLToPath(new URL('../..', import.meta.url));
+    const root = fileURLToPath(new URL('../../..', import.meta.url));
     const tmp = mkdtempSync(join(tmpdir(), 'hb-client-init-cwd-'));
     const packageRoot = join(root, 'client');
     const result = spawnSync(process.execPath, [join(packageRoot, 'postinstall.js')], {

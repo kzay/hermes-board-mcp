@@ -22,21 +22,23 @@ By contributing to this project, you certify that:
 ## Development
 
 ```bash
+cd server
 npm install
 npm test
 npm run release:check
 ```
 
+Root-level `npm run build`, `npm run test`, etc. delegate to `server/` via `--prefix`.
+
 Use Node.js 20 or newer. The project uses TypeScript strict mode and `node:test`.
 
 ## Release Checks
 
-Before opening a pull request, run:
+Before opening a pull request, run from the repo root (or from `server/`):
 
 ```bash
-npm test
+npm run test
 npm run release:check
-npm audit --omit=dev
 ```
 
 For changes that affect worker dispatch, also run the Docker E2E suite when available:

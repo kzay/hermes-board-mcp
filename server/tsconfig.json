@@ -17,5 +17,5 @@
     "sourceMap": true
   },
   "include": ["src/**/*.ts", "test/**/*.ts", "test/e2e/**/*.ts", "scripts/**/*.ts"],
-  "exclude": ["node_modules", "dist", "client", "openspec"]
+  "exclude": ["node_modules", "dist"]
 }
