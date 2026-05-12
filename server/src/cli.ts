@@ -119,6 +119,9 @@ if (command === 'start') {
     openspec: {
       root: 'openspec/',
     },
+    speckit: {
+      root: 'speckit/',
+    },
   };
   console.log(JSON.stringify(starter, null, 2));
 } else {

@@ -104,6 +104,16 @@
           "default": "openspec/"
         }
       }
+    },
+    "speckit": {
+      "type": "object",
+      "properties": {
+        "root": {
+          "type": "string",
+          "description": "Relative path to speckit root from repo root",
+          "default": "speckit/"
+        }
+      }
     }
   },
   "additionalProperties": false

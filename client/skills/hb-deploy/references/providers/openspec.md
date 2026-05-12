@@ -5,8 +5,9 @@ Use this reference only after `hb-deploy` has resolved an `openspec:` spec refer
 ## Ref Resolution
 
 - Supported ref format: `openspec:<change-name>`.
-- If the user gives only a change name, find `openspec/changes/<change-name>/` and derive `spec_ref: "openspec:<change-name>"`.
-- If `openspec/changes/<change-name>/` is missing, stop before task creation and report the missing path.
+- The base directory defaults to `openspec/` but can be overridden via `hermes-board.json` (`openspec.root`). If configured, pass the root as `spec_base_path` to `hb_import_spec`.
+- If the user gives only a change name, find `<root>/changes/<change-name>/` and derive `spec_ref: "openspec:<change-name>"`.
+- If `<root>/changes/<change-name>/` is missing, stop before task creation and report the missing path.
 
 ## Local Validation
 
@@ -16,8 +17,8 @@ Use this reference only after `hb-deploy` has resolved an `openspec:` spec refer
 
 ## Scoped Git Check
 
-- Check only the OpenSpec change directory with `git status --short openspec/changes/<change-name>/`.
-- If the change directory has uncommitted files, show the scoped diff and offer an assisted commit that stages only `openspec/changes/<change-name>/`.
+- Check only the OpenSpec change directory with `git status --short <root>/changes/<change-name>/` (where `<root>` is `openspec.root` from config or `openspec/` by default).
+- If the change directory has uncommitted files, show the scoped diff and offer an assisted commit that stages only `<root>/changes/<change-name>/`.
 - Do not stage unrelated files.
 - Do not push automatically.
 

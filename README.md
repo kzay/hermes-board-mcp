@@ -17,7 +17,7 @@ Use it when you want:
 
 - A shared kanban surface for human and AI operators.
 - MCP tools for creating, assigning, linking, blocking, unblocking, and completing tasks.
-- Provider-backed dispatch, currently including `openspec:<change-name>` through `hb_import_spec`.
+- Provider-backed dispatch through `hb_import_spec`, supporting `openspec:<change-name>` and `speckit:<identifier>` providers with configurable base paths.
 - Portable worker instructions pinned to a Git repo, branch, and committed `base_commit`.
 - Cursor-ready `hb-*` skills that guide deploy, monitor, plan, worker, and release workflows.
 
@@ -185,6 +185,9 @@ Example:
   },
   "openspec": {
     "root": "openspec/"
+  },
+  "speckit": {
+    "root": "speckit/"
   }
 }
 ```
@@ -231,16 +234,23 @@ Remote REST URLs are blocked by default. Set `HERMES_KANBAN_API_ALLOW_REMOTE=1` 
 `hb_import_spec` creates one orchestration task from a provider-prefixed spec reference.
 
 ```text
-spec_ref:      "openspec:add-auth"
-base_commit:   required Git commit hash
-project:       optional project slug
-repo:          optional repo URL or alias
-base_branch:   optional branch, defaults to project default_branch
-workspace:     "scratch" by default
-allowed_paths: optional path allowlist
+spec_ref:        "openspec:add-auth" or "speckit:feature/42"
+base_commit:     required Git commit hash
+project:         optional project slug
+repo:            optional repo URL or alias
+base_branch:     optional branch, defaults to project default_branch
+workspace:       "scratch" by default
+allowed_paths:   optional path allowlist
+spec_base_path:  optional provider root override used for spec_path derivation
 ```
 
-The current release supports OpenSpec refs such as `openspec:<change-name>`. The created task includes the Git repository, branch, commit, provider, and provider-derived path so a remote worker can reproduce the intended checkout.
+Supported providers:
+- `openspec:<change-name>` — resolves to `openspec/changes/<change-name>/` by convention.
+- `speckit:<identifier>` — resolves to `speckit/specs/<identifier>/` by convention.
+
+Both providers support project-level root overrides via the `spec_base_path` parameter or `hermes-board.json` config (`openspec.root` / `speckit.root`). For example, `spec_base_path: "custom-speckit/"` with `speckit:feature/42` resolves to `custom-speckit/specs/feature/42/`. When not specified, convention defaults apply.
+
+The created task includes the Git repository, branch, commit, provider, and provider-derived path so a remote worker can reproduce the intended checkout.
 
 ## Configuration
 

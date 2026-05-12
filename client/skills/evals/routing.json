@@ -16,6 +16,13 @@
       "expected_provider_reference": "hb-deploy/references/providers/openspec.md"
     },
     {
+      "name": "dispatch-speckit-provider-ref",
+      "user_request": "Dispatch speckit:feature/42 to the board.",
+      "expected_skill": "hb-deploy",
+      "should_not_load": ["hb-monitor", "hb-plan"],
+      "expected_provider_reference": "hb-deploy/references/providers/speckit.md"
+    },
+    {
       "name": "unsupported-provider",
       "user_request": "Dispatch unknown:feature-42 to Hermes.",
       "expected_skill": "hb-deploy",

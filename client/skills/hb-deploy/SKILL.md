@@ -1,6 +1,6 @@
 ---
 name: hb-deploy
-description: Load when the user wants to deploy, dispatch, push, or create board work from a provider-backed spec change through hb_import_spec, including OpenSpec refs such as openspec:<change-name>.
+description: Load when the user wants to deploy, dispatch, push, or create board work from a provider-backed spec change through hb_import_spec, including openspec:<change-name> and speckit:<identifier> refs.
 ---
 
 # Hermes Board Deploy
@@ -17,16 +17,19 @@ When the user invokes `/hb-deploy <name>`, the intent is **already declared**. D
 
 ## Supported Providers
 
-- `openspec:<change-name>` is supported for this release. Read `references/providers/openspec.md` before deriving or validating an OpenSpec ref.
-- `speckit:<feature-id>` is recognized by the server registry but is not release-ready yet. Do not promise successful dispatch for it.
+- `openspec:<change-name>` — read `references/providers/openspec.md` before deriving or validating an OpenSpec ref.
+- `speckit:<identifier>` — read `references/providers/speckit.md` before deriving or validating a SpecKit feature.
 
-If the user provides any other prefix, stop before task creation and report the supported release prefix.
+Both providers support configurable base paths via `hermes-board.json` (`openspec.root` / `speckit.root`). When configured, pass the provider root as `spec_base_path` to `hb_import_spec`.
+
+If the user provides any other prefix, stop before task creation and report the supported prefixes.
 
 ## Steps
 
 0. **Read client config** - read `hermes-board.json` from the repo root.
    - Prefer explicit user values over env vars, env vars over config, config over derived repo slug.
    - Use `project.slug` as the default `project`, `project.board` as the default `board`, and `repo.url` or a matching alias as the optional `repo` argument.
+   - Read the provider-specific root if configured (e.g. `openspec.root`, `speckit.root`) to pass as `spec_base_path`.
    - If the file is absent, derive a likely project slug from `git remote get-url origin` and use it. Only ask if there is genuine ambiguity (multiple remotes, no remote).
 1. **Resolve the spec reference**.
    - If the user supplied a provider-prefixed reference, validate the prefix before continuing.
@@ -49,7 +52,7 @@ If the user provides any other prefix, stop before task creation and report the 
    - `project` or `repo`
    - `base_branch`
    - `base_commit`
-   - Optional: `board`, `assignee`, `workspace`, `skills`, `allowed_paths`
+   - Optional: `board`, `assignee`, `workspace`, `skills`, `allowed_paths`, `spec_base_path`
 
    Do not build a local task array for `hb_import_spec`. The server resolves the provider from `spec_ref`, creates one orchestration task, and embeds the portable checkout context for the worker.
 5. **Report**.
@@ -80,3 +83,4 @@ Do not create or route to provider-specific top-level skills unless the provider
 - Do not dispatch unsupported or experimental provider prefixes.
 - Do not skip provider-local validation just because the server can resolve the prefix.
 - Do not push, publish, merge, or mutate credentials while preparing dispatch.
+- When `hermes-board.json` has a provider root configured, always pass it as `spec_base_path` — do not silently rely on server convention defaults.

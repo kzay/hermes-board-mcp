@@ -9,6 +9,8 @@ export interface BuildBodyOpts {
   repoUrl: string;
   baseBranch: string;
   baseCommit: string;
+  /** Override the provider's default root directory, e.g. "openspec/" or "speckit/". */
+  specBasePath?: string;
 }
 
 export interface SpecProvider {

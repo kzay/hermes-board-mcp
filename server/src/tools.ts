@@ -1010,6 +1010,7 @@ export const toolDefs: ToolDef[] = [
       workspace: z.union([z.literal('scratch'), z.literal('worktree'), z.string().regex(/^dir:/)]).optional(),
       skills: z.array(z.string()).optional(),
       allowed_paths: z.array(z.string()).optional().describe('Paths the worker is allowed to modify'),
+      spec_base_path: z.string().optional().describe('Override the provider default root directory (e.g. "openspec/" or "speckit/")'),
     },
     async handler(args) {
       const specRef = String(args.spec_ref);
@@ -1056,10 +1057,11 @@ export const toolDefs: ToolDef[] = [
       const baseBranch = args.base_branch ? String(args.base_branch) : defaultBranch;
 
       // Resolve the spec provider and build the body
+      const specBasePath = args.spec_base_path ? String(args.spec_base_path) : undefined;
       let specBody: string;
       try {
         const provider = resolveProvider(specRef);
-        specBody = provider.buildBody(specRef, { repoUrl, baseBranch, baseCommit });
+        specBody = provider.buildBody(specRef, { repoUrl, baseBranch, baseCommit, specBasePath });
       } catch (err) {
         return errorResult((err as Error).message);
       }

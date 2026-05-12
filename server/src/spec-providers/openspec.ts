@@ -3,6 +3,8 @@
  *
  * Derives spec_path from the change name using the OpenSpec convention:
  *   openspec/changes/<change-name>/
+ *
+ * Supports configurable provider roots via opts.specBasePath.
  */
 import type { SpecProvider, BuildBodyOpts } from './types.js';
 
@@ -19,7 +21,8 @@ export class OpenSpecProvider implements SpecProvider {
       throw new Error(`Invalid openspec spec_ref: "${specRef}" — missing change name after prefix`);
     }
 
-    const specPath = `openspec/changes/${changeName}/`;
+    const root = ensureTrailingSlash(opts.specBasePath ?? 'openspec/');
+    const specPath = `${root}changes/${changeName}/`;
 
     const lines = [
       '```hermes-board-spec',
@@ -34,4 +37,8 @@ export class OpenSpecProvider implements SpecProvider {
 
     return lines.join('\n');
   }
+}
+
+function ensureTrailingSlash(path: string): string {
+  return path.endsWith('/') ? path : `${path}/`;
 }

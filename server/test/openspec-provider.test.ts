@@ -50,4 +50,33 @@ describe('OpenSpecProvider', () => {
       /missing change name after prefix/,
     );
   });
+
+  it('uses opts.specBasePath when provided', () => {
+    const body = provider.buildBody('openspec:add-dark-mode', {
+      repoUrl: 'https://github.com/org/repo',
+      baseBranch: 'main',
+      baseCommit: 'abc123',
+      specBasePath: 'custom-openspec/',
+    });
+    assert.ok(body.includes('spec_path: custom-openspec/changes/add-dark-mode/'));
+  });
+
+  it('normalizes opts.specBasePath without trailing slash', () => {
+    const body = provider.buildBody('openspec:add-dark-mode', {
+      repoUrl: 'https://github.com/org/repo',
+      baseBranch: 'main',
+      baseCommit: 'abc123',
+      specBasePath: 'custom-openspec',
+    });
+    assert.ok(body.includes('spec_path: custom-openspec/changes/add-dark-mode/'));
+  });
+
+  it('falls back to convention when specBasePath is undefined', () => {
+    const body = provider.buildBody('openspec:add-dark-mode', {
+      repoUrl: 'https://github.com/org/repo',
+      baseBranch: 'main',
+      baseCommit: 'abc123',
+    });
+    assert.ok(body.includes('spec_path: openspec/changes/add-dark-mode/'));
+  });
 });

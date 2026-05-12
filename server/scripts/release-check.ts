@@ -15,6 +15,7 @@ const REQUIRED_CLIENT_PACKAGE_FILES = [
   'CHANGELOG.md',
   'LICENSE',
   'skills/hb-deploy/references/providers/openspec.md',
+  'skills/hb-deploy/references/providers/speckit.md',
   'skills/evals/routing.json',
 ] as const;
 

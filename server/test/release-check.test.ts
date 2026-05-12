@@ -32,6 +32,7 @@ describe('release readiness checks', () => {
       'package.json',
       'skills/hb-deploy/SKILL.md',
       'skills/hb-deploy/references/providers/openspec.md',
+      'skills/hb-deploy/references/providers/speckit.md',
       'skills/evals/routing.json',
       'skills/hb-monitor/SKILL.md',
       'skills/hb-plan/SKILL.md',
@@ -66,6 +67,7 @@ describe('release readiness checks', () => {
 
     const errors = validateClientPackFiles(files);
     assert.match(errors.join('\n'), /Missing client package file: skills\/hb-deploy\/references\/providers\/openspec\.md/);
+    assert.match(errors.join('\n'), /Missing client package file: skills\/hb-deploy\/references\/providers\/speckit\.md/);
     assert.match(errors.join('\n'), /Missing client package file: skills\/evals\/routing\.json/);
   });
 

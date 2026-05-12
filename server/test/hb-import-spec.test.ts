@@ -77,7 +77,7 @@ describe('hb_import_spec handler', () => {
     assert.ok(text.includes('repo_url'));
   });
 
-  it('returns error for speckit provider (not yet implemented) with nonexistent project', async () => {
+  it('returns error for speckit provider with nonexistent project', async () => {
     const { SpeckitProvider } = await import('../src/spec-providers/speckit.js');
     registerProvider(new SpeckitProvider());
 
@@ -90,6 +90,38 @@ describe('hb_import_spec handler', () => {
     assert.equal(result.isError, true);
     const text = result.content[0].text;
     assert.ok(text.includes('not found'));
+  });
+
+  it('speckit provider builds correct body via direct buildBody call', async () => {
+    const { SpeckitProvider } = await import('../src/spec-providers/speckit.js');
+    const provider = new SpeckitProvider();
+
+    const body = provider.buildBody('speckit:feature/42', {
+      repoUrl: 'git@github.com:org/repo.git',
+      baseBranch: 'main',
+      baseCommit: 'abc123def456',
+    });
+
+    assert.ok(body.includes('spec_provider: speckit'));
+    assert.ok(body.includes('spec_ref: speckit:feature/42'));
+    assert.ok(body.includes('spec_path: speckit/specs/feature/42/'));
+    assert.ok(body.includes('repo_url: git@github.com:org/repo.git'));
+    assert.ok(body.includes('base_commit: abc123def456'));
+  });
+
+  it('forwards spec_base_path to provider via BuildBodyOpts', async () => {
+    const { SpeckitProvider } = await import('../src/spec-providers/speckit.js');
+    const provider = new SpeckitProvider();
+
+    const body = provider.buildBody('speckit:my-feature', {
+      repoUrl: 'https://github.com/org/repo',
+      baseBranch: 'main',
+      baseCommit: 'deadbeef',
+      specBasePath: 'override/path/',
+    });
+
+    assert.ok(body.includes('spec_path: override/path/specs/my-feature/'));
+    assert.ok(!body.includes('speckit/specs/'));
   });
 
   it('returns error when board provided but repoUrl cannot be determined', async () => {

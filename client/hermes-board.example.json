@@ -26,5 +26,8 @@
   },
   "openspec": {
     "root": "openspec/"
+  },
+  "speckit": {
+    "root": "speckit/"
   }
 }

@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.5.0 - 2026-05-12
+
+### Added
+- `speckit:<identifier>` provider support for `hb_import_spec`.
+- Configurable provider base paths via `spec_base_path` / `BuildBodyOpts.specBasePath`.
+
+### Changed
+- `openspec:` and `speckit:` dispatch now support project-configured provider roots.
+
 ## 3.3.4 - 2026-05-11
 
 ### Fixed

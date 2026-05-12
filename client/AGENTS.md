@@ -22,6 +22,7 @@ Verify the canonical skills were copied:
 ```bash
 ls .cursor/skills/board/hb-deploy/SKILL.md
 ls .cursor/skills/board/hb-deploy/references/providers/openspec.md
+ls .cursor/skills/board/hb-deploy/references/providers/speckit.md
 ls .cursor/skills/board/hb-monitor/SKILL.md
 ls .cursor/skills/board/hb-plan/SKILL.md
 ls .cursor/skills/board/hb-worker/SKILL.md
@@ -99,6 +100,7 @@ If you get connection refused, the server is not running or the URL is wrong.
 
 - Use `hb-deploy` for provider-backed spec dispatch through `hb_import_spec` and notification subscriptions (`hb_notify_subscribe`).
   - For `openspec:` refs, read `hb-deploy/references/providers/openspec.md` before deriving or validating the change.
+  - For `speckit:` refs, read `hb-deploy/references/providers/speckit.md` before deriving or validating the feature.
 - Use `hb-monitor` for board summaries, follow workflows, worker logs (`hb_task_log`), task context (`hb_task_context`), board events (`hb_watch_events`), assignee overview (`hb_list_assignees`), and notification listing (`hb_notify_list`).
 - Use `hb-plan` for board initialization (`hb_init`), board management (`hb_boards_switch`, `hb_boards_rename`), task creation, editing (`hb_edit_task`), assignment, links, specify, and dispatch.
 - Use `hb-worker` for claiming tasks (`hb_claim_task`), reading context (`hb_task_context`), comments, blockers, unblock, heartbeat, and worker completion with structured metadata.

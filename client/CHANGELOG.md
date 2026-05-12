@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.5.0 - 2026-05-12
+
+- Added `speckit:` provider guidance for `hb-deploy`.
+- Added `speckit.root` and `openspec.root` provider path handling in `hermes-board.json`.
+
 ## 3.3.4 - 2026-05-11
 
 - Version bump to align with server fix (no client changes).
