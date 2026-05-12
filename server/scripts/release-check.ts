@@ -193,12 +193,17 @@ export function validateReleaseMetadata(root: string): string[] {
     }
   }
 
-  for (const doc of ACTIVE_RELEASE_DOCS) {
+  const VERSION_FREE_DOCS = ['README.md', 'AGENTS.md', 'CLAUDE.md', 'server/AGENTS.md', 'server/CLAUDE.md', 'client/README.md', 'client/AGENTS.md'];
+  const semverPattern = /(?:^|[\sv("`])(\d+\.\d+\.\d+)(?!\.\d)/gm;
+  for (const doc of VERSION_FREE_DOCS) {
     const fullPath = join(root, doc);
     if (!existsSync(fullPath)) continue;
     const text = readFileSync(fullPath, 'utf8');
-    if (text.includes('3.2.0') || text.includes('v3.2')) {
-      errors.push(`Stale active release version in ${doc}`);
+    let match: RegExpExecArray | null;
+    while ((match = semverPattern.exec(text)) !== null) {
+      const ver = match[1];
+      if (ver.startsWith('127.') || ver.startsWith('0.0.')) continue;
+      errors.push(`Doc file ${doc} hardcodes version "${ver}" — remove it so only package.json owns the version`);
     }
   }
 

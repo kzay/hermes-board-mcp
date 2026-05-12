@@ -47,7 +47,7 @@ This project implements:
 - **Two-package model**: The server (`@kzay/hermes-board-mcp`, in `server/`) runs on the VPS with the Hermes agent. The client (`@kzay/hermes-board-skills`, in `client/`) is installed independently in the developer's IDE or CLI. The two packages can be installed separately and never co-exist on the same host.
 - **Client skill release surface**: `client/` publishes canonical `hb-*` skills (`hb-deploy`, `hb-monitor`, `hb-plan`, `hb-worker`, `hb-release`) plus provider references, routing evals, and a tool coverage matrix.
 - **Release checks**: `npm run release:check` (from root or `server/`) verifies stale release-facing tool names, client skill quality, docs drift, and package contents before publish.
-- **Version alignment**: Server and client packages ship together as `3.4.0`.
+- **Version alignment**: Server and client packages ship together (see `server/package.json` for current version).
 
 ## OpenSpec Integration
 

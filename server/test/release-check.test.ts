@@ -96,12 +96,12 @@ describe('release readiness checks', () => {
       JSON.stringify({ version: '3.2.0', packages: { '': { version: '3.2.0' } } }),
       'utf8'
     );
-    writeFileSync(join(root, 'README.md'), '# hermes-board-mcp v3.2\n', 'utf8');
+    writeFileSync(join(root, 'README.md'), '# hermes-board-mcp v3.2.0\n', 'utf8');
 
     const errors = validateReleaseMetadata(root);
     assert.match(errors.join('\n'), /Server and client package versions must match/);
     assert.match(errors.join('\n'), /package-lock\.json version must match/);
-    assert.match(errors.join('\n'), /Stale active release version in README\.md/);
+    assert.match(errors.join('\n'), /Doc file README\.md hardcodes version/);
   });
 
   it('validates client skill frontmatter and routing eval references', () => {
