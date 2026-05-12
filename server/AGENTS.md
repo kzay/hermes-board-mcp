@@ -1,4 +1,4 @@
-# @kzay/hermes-board-mcp v3.3.4 — Server Agent Instructions
+# @kzay/hermes-board-mcp v3.4.0 — Server Agent Instructions
 
 MCP server for the Hermes board system. For client skills: `../client/AGENTS.md`
 
@@ -32,7 +32,7 @@ hermes kanban --help    # kanban subcommand must exist
 
 ```bash
 npm install -g @kzay/hermes-board-mcp
-hermes-board-mcp --version    # expected: 3.3.4
+hermes-board-mcp --version    # expected: 3.4.0
 ```
 
 From source: `cd server && npm install && npm run build && node dist/src/cli.js --version`

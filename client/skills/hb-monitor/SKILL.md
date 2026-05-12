@@ -1,6 +1,6 @@
 ---
 name: hb-monitor
-description: Load when the user wants board status, task status, worker runs, kanban overview, spec status, or to follow provider-backed Hermes work until completion or failure.
+description: Load when the user wants board status, task status, worker runs, worker logs, assignee overview, board events, kanban overview, spec status, or to follow provider-backed Hermes work until completion or failure.
 ---
 
 # Hermes Board Monitor
@@ -22,7 +22,10 @@ Use when the user says "show board status", "check factory", "what tasks are pen
 4. **Show summary** - display boards with task counts by status.
 5. **Drill down** - if the user asks about a board, call `hb_list_tasks` with `board` and optional `status`.
 6. **Inspect active work** - call `hb_show_task`, `hb_get_runs`, or `hb_tail_events` for specific tasks as needed.
-7. **Check local specs** - for OpenSpec status, run `openspec list --json` locally. The MCP server does not read local spec files.
+7. **Inspect worker details** - call `hb_task_log` to read a worker's log file; call `hb_task_context` to see the full context a worker receives (title, body, parent results, comments).
+8. **Board-wide observability** - call `hb_watch_events` for a snapshot of recent board events (filterable by assignee, tenant, kinds); call `hb_list_assignees` for profiles with per-assignee task counts; call `hb_boards_show` for current board metadata.
+9. **Notification visibility** - call `hb_notify_list` to see active notification subscriptions for a task or the whole board.
+10. **Check local specs** - for OpenSpec status, run `openspec list --json` locally. The MCP server does not read local spec files.
 
 ## Spec-Specific Lookup
 
@@ -57,7 +60,7 @@ Purpose: Track a deployed provider-backed spec until completion or failure.
 
 ## Prerequisites
 
-- `hb_list_boards`, `hb_list_tasks`, `hb_show_task`, `hb_get_runs`, and `hb_tail_events` MCP tools must be available.
+- `hb_list_boards`, `hb_list_tasks`, `hb_show_task`, `hb_get_runs`, `hb_tail_events`, `hb_watch_events`, `hb_list_assignees`, `hb_task_log`, `hb_task_context`, `hb_boards_show`, `hb_notify_list` MCP tools must be available.
 - `openspec` CLI is only needed for local OpenSpec listing.
 
 ## Gotchas

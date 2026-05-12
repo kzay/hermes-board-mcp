@@ -46,6 +46,40 @@ async function tryRestThenCli<T>(
   }
 }
 
+function resolveTaskIds(taskId: unknown, taskIds: unknown): string[] | null {
+  if (Array.isArray(taskIds) && taskIds.length > 0) return taskIds.map(String);
+  if (taskId !== undefined && taskId !== null) return [String(taskId)];
+  return null;
+}
+
+async function bulkLifecycle(
+  board: string,
+  ids: string[],
+  status: string,
+  extra?: Record<string, unknown>,
+): Promise<ReturnType<typeof textResult>> {
+  const restBody: Record<string, unknown> = { ids, status, ...extra };
+  try {
+    const data = await client.tryRest('POST', '/tasks/bulk', restBody, { board });
+    return textResult(data);
+  } catch {
+    const results: Array<{ id: string; ok: boolean; error?: string }> = [];
+    for (const id of ids) {
+      try {
+        const cliArgs = ['kanban', '--board', board, status === 'done' ? 'complete' : status === 'blocked' ? 'block' : status === 'ready' ? 'unblock' : 'archive', id];
+        if (extra?.summary) cliArgs.push('--summary', String(extra.summary));
+        if (extra?.result) cliArgs.push('--result', String(extra.result));
+        if (extra?.reason) cliArgs.push(String(extra.reason));
+        await client.cliFallback(cliArgs);
+        results.push({ id, ok: true });
+      } catch (err) {
+        results.push({ id, ok: false, error: (err as Error).message });
+      }
+    }
+    return textResult(results);
+  }
+}
+
 function isValidStatus(s: string | undefined): s is typeof VALID_STATUSES[number] {
   if (!s) return false;
   return VALID_STATUSES.includes(s as typeof VALID_STATUSES[number]);
@@ -189,13 +223,21 @@ export const toolDefs: ToolDef[] = [
     name: 'hb_create_board',
     description: 'Create a new kanban board.',
     inputSchema: {
-      board: z.string().describe('Slug for the new board'),
-      description: z.string().optional().describe('Optional board description'),
+      board: z.string().describe('Slug for the new board (kebab-case)'),
+      name: z.string().optional().describe('Display name'),
+      description: z.string().optional().describe('Board description'),
+      icon: z.string().optional().describe('Board icon (emoji)'),
+      color: z.string().optional().describe('Board color'),
+      switch_to: z.boolean().optional().describe('Make this the active board after creation'),
     },
     async handler(args) {
       const board = String(args.board);
       const cmdArgs = ['kanban', 'boards', 'create', board];
+      if (args.name) cmdArgs.push('--name', String(args.name));
       if (args.description) cmdArgs.push('--description', String(args.description));
+      if (args.icon) cmdArgs.push('--icon', String(args.icon));
+      if (args.color) cmdArgs.push('--color', String(args.color));
+      if (args.switch_to) cmdArgs.push('--switch');
       const result = await client.cliFallback(cmdArgs);
       return textResult(result);
     },
@@ -204,10 +246,12 @@ export const toolDefs: ToolDef[] = [
   // ── Task-level reads ────────────────────────────────────────────
   {
     name: 'hb_list_tasks',
-    description: 'List tasks on a kanban board, optionally filtered by status or metadata.',
+    description: 'List tasks on a kanban board, optionally filtered by status, assignee, or metadata.',
     inputSchema: {
       board: z.string().describe('Board slug'),
       status: z.enum(VALID_STATUSES).optional().describe('Filter by status'),
+      assignee: z.string().optional().describe('Filter by assignee profile'),
+      mine: z.boolean().optional().describe('Show only tasks assigned to the current profile'),
       tenant: z.string().optional(),
       include_archived: z.boolean().optional(),
     },
@@ -215,12 +259,15 @@ export const toolDefs: ToolDef[] = [
       const board = String(args.board);
       const query: Record<string, string | boolean | undefined> = { board };
       if (args.status) query.status = String(args.status);
+      if (args.assignee) query.assignee = String(args.assignee);
       if (args.tenant) query.tenant = String(args.tenant);
       if (args.include_archived !== undefined) query.include_archived = Boolean(args.include_archived);
 
       const restPromise = () => client.tryRest('GET', '/board', undefined, query);
       const cliArgs = ['kanban', '--board', board, 'list', '--json'];
       if (args.status) cliArgs.push('--status', String(args.status));
+      if (args.assignee) cliArgs.push('--assignee', String(args.assignee));
+      if (args.mine) cliArgs.push('--mine');
       if (args.tenant) cliArgs.push('--tenant', String(args.tenant));
       const cliPromise = () => client.cliFallback(cliArgs);
 
@@ -311,97 +358,120 @@ export const toolDefs: ToolDef[] = [
   // ── Task transitions ─────────────────────────────────────────────
   {
     name: 'hb_complete_task',
-    description: 'Complete a kanban task (status → done).',
+    description: 'Complete one or more kanban tasks (status → done). Provide task_id for a single task or task_ids for bulk.',
     inputSchema: {
       board: z.string(),
-      task_id: z.string(),
+      task_id: z.string().optional(),
+      task_ids: z.array(z.string()).optional(),
       summary: z.string().optional(),
       result: z.string().optional(),
+      metadata: z.record(z.string(), z.unknown()).optional().describe('Structured handoff metadata for downstream consumers'),
     },
     async handler(args) {
       const board = String(args.board);
-      const rawId = String(args.task_id);
-      const numericId = Number(rawId);
-      const taskId = Number.isFinite(numericId) && numericId > 0 ? String(numericId) : rawId;
+      const ids = resolveTaskIds(args.task_id, args.task_ids);
+      if (!ids) return errorResult('Provide task_id or task_ids');
       const summary = args.summary ? String(args.summary) : undefined;
       const result = args.result ? String(args.result) : undefined;
+      const metadata = args.metadata as Record<string, unknown> | undefined;
 
-      const restBody: Record<string, unknown> = { status: 'done' };
-      if (summary) restBody.summary = summary;
-      if (result) restBody.result = result;
+      if (ids.length === 1) {
+        const taskId = ids[0];
+        const restBody: Record<string, unknown> = { status: 'done' };
+        if (summary) restBody.summary = summary;
+        if (result) restBody.result = result;
+        if (metadata) restBody.metadata = metadata;
 
-      const restPromise = () => client.tryRest('PATCH', `/tasks/${taskId}`, restBody, { board });
-      const cliArgs = ['kanban', '--board', board, 'complete', taskId];
-      if (summary) cliArgs.push('--summary', summary);
-      if (result) cliArgs.push('--result', result);
-      const cliPromise = () => client.cliFallback(cliArgs);
+        const restPromise = () => client.tryRest('PATCH', `/tasks/${taskId}`, restBody, { board });
+        const cliArgs = ['kanban', '--board', board, 'complete', taskId];
+        if (summary) cliArgs.push('--summary', summary);
+        if (result) cliArgs.push('--result', result);
+        if (metadata) cliArgs.push('--metadata', JSON.stringify(metadata));
+        const cliPromise = () => client.cliFallback(cliArgs);
 
-      const data = await tryRestThenCli(restPromise, cliPromise);
-      return textResult(data);
+        const data = await tryRestThenCli(restPromise, cliPromise);
+        return textResult(data);
+      }
+
+      return bulkLifecycle(board, ids, 'done', { summary, result, metadata });
     },
   },
 
   {
     name: 'hb_block_task',
-    description: 'Block a kanban task (status → blocked).',
+    description: 'Block one or more kanban tasks (status → blocked). Provide task_id for a single task or task_ids for bulk.',
     inputSchema: {
       board: z.string(),
-      task_id: z.string(),
+      task_id: z.string().optional(),
+      task_ids: z.array(z.string()).optional(),
       reason: z.string().describe('Blocking reason'),
     },
     async handler(args) {
       const board = String(args.board);
-      const taskId = String(args.task_id);
+      const ids = resolveTaskIds(args.task_id, args.task_ids);
+      if (!ids) return errorResult('Provide task_id or task_ids');
       const reason = String(args.reason);
 
-      const restBody = { status: 'blocked', reason };
+      if (ids.length === 1) {
+        const restBody = { status: 'blocked', reason };
+        const restPromise = () => client.tryRest('PATCH', `/tasks/${ids[0]}`, restBody, { board });
+        const cliArgs = ['kanban', '--board', board, 'block', ids[0], reason];
+        const cliPromise = () => client.cliFallback(cliArgs);
+        const data = await tryRestThenCli(restPromise, cliPromise);
+        return textResult(data);
+      }
 
-      const restPromise = () => client.tryRest('PATCH', `/tasks/${taskId}`, restBody, { board });
-      const cliArgs = ['kanban', '--board', board, 'block', taskId, reason];
-      const cliPromise = () => client.cliFallback(cliArgs);
-
-      const data = await tryRestThenCli(restPromise, cliPromise);
-      return textResult(data);
+      return bulkLifecycle(board, ids, 'blocked', { reason });
     },
   },
 
   {
     name: 'hb_unblock_task',
-    description: 'Unblock a kanban task (status → ready).',
+    description: 'Unblock one or more kanban tasks (status → ready). Provide task_id for a single task or task_ids for bulk.',
     inputSchema: {
       board: z.string(),
-      task_id: z.string(),
+      task_id: z.string().optional(),
+      task_ids: z.array(z.string()).optional(),
     },
     async handler(args) {
       const board = String(args.board);
-      const taskId = String(args.task_id);
+      const ids = resolveTaskIds(args.task_id, args.task_ids);
+      if (!ids) return errorResult('Provide task_id or task_ids');
 
-      const restPromise = () => client.tryRest('PATCH', `/tasks/${taskId}`, { status: 'ready' }, { board });
-      const cliArgs = ['kanban', '--board', board, 'unblock', taskId];
-      const cliPromise = () => client.cliFallback(cliArgs);
+      if (ids.length === 1) {
+        const restPromise = () => client.tryRest('PATCH', `/tasks/${ids[0]}`, { status: 'ready' }, { board });
+        const cliArgs = ['kanban', '--board', board, 'unblock', ids[0]];
+        const cliPromise = () => client.cliFallback(cliArgs);
+        const data = await tryRestThenCli(restPromise, cliPromise);
+        return textResult(data);
+      }
 
-      const data = await tryRestThenCli(restPromise, cliPromise);
-      return textResult(data);
+      return bulkLifecycle(board, ids, 'ready');
     },
   },
 
   {
     name: 'hb_archive_task',
-    description: 'Archive a kanban task (status → archived).',
+    description: 'Archive one or more kanban tasks (status → archived). Provide task_id for a single task or task_ids for bulk.',
     inputSchema: {
       board: z.string(),
-      task_id: z.string(),
+      task_id: z.string().optional(),
+      task_ids: z.array(z.string()).optional(),
     },
     async handler(args) {
       const board = String(args.board);
-      const taskId = String(args.task_id);
+      const ids = resolveTaskIds(args.task_id, args.task_ids);
+      if (!ids) return errorResult('Provide task_id or task_ids');
 
-      const restPromise = () => client.tryRest('PATCH', `/tasks/${taskId}`, { status: 'archived' }, { board });
-      const cliArgs = ['kanban', '--board', board, 'archive', taskId];
-      const cliPromise = () => client.cliFallback(cliArgs);
+      if (ids.length === 1) {
+        const restPromise = () => client.tryRest('PATCH', `/tasks/${ids[0]}`, { status: 'archived' }, { board });
+        const cliArgs = ['kanban', '--board', board, 'archive', ids[0]];
+        const cliPromise = () => client.cliFallback(cliArgs);
+        const data = await tryRestThenCli(restPromise, cliPromise);
+        return textResult(data);
+      }
 
-      const data = await tryRestThenCli(restPromise, cliPromise);
-      return textResult(data);
+      return bulkLifecycle(board, ids, 'archived');
     },
   },
 
@@ -641,6 +711,282 @@ export const toolDefs: ToolDef[] = [
 
       const cliArgs = ['kanban', '--board', board, 'heartbeat', taskId, '--json'];
       if (note) cliArgs.push('--note', note);
+      const data = await client.cliFallback(cliArgs);
+      return textResult(data);
+    },
+  },
+
+  // ── Task mutation ────────────────────────────────────────────────
+  {
+    name: 'hb_edit_task',
+    description: 'Edit fields on an existing kanban task (title, body, priority, result). At least one field must be provided.',
+    inputSchema: {
+      board: z.string().optional(),
+      task_id: z.string(),
+      title: z.string().optional(),
+      body: z.string().optional(),
+      priority: z.number().int().optional(),
+      result: z.string().optional(),
+    },
+    async handler(args) {
+      const board = args.board ? String(args.board) : undefined;
+      const taskId = String(args.task_id);
+      const patch: Record<string, unknown> = {};
+      if (args.title !== undefined) patch.title = String(args.title);
+      if (args.body !== undefined) patch.body = String(args.body);
+      if (args.priority !== undefined) patch.priority = Number(args.priority);
+      if (args.result !== undefined) patch.result = String(args.result);
+
+      if (Object.keys(patch).length === 0) {
+        return errorResult('At least one field to update must be provided');
+      }
+
+      const restPromise = () => client.tryRest('PATCH', `/tasks/${taskId}`, patch, board ? { board } : undefined);
+      const cliArgs = ['kanban', 'show', taskId, '--json'];
+      if (board) cliArgs.splice(1, 0, '--board', board);
+      const cliPromise = () => client.cliFallback(cliArgs);
+
+      const data = await tryRestThenCli(restPromise, cliPromise);
+      return textResult(data);
+    },
+  },
+
+  // ── Task claim ──────────────────────────────────────────────────
+  {
+    name: 'hb_claim_task',
+    description: 'Atomically claim a ready task. Returns the resolved workspace path.',
+    inputSchema: {
+      board: z.string().optional(),
+      task_id: z.string(),
+      ttl: z.number().int().optional().describe('Time-to-live in seconds for the claim'),
+    },
+    async handler(args) {
+      const board = args.board ? String(args.board) : undefined;
+      const taskId = String(args.task_id);
+      const cliArgs = ['kanban', 'claim', taskId, '--json'];
+      if (board) cliArgs.splice(1, 0, '--board', board);
+      if (args.ttl !== undefined) cliArgs.push('--ttl', String(args.ttl));
+      const data = await client.cliFallback(cliArgs);
+      return textResult(data);
+    },
+  },
+
+  // ── Task context & logs ─────────────────────────────────────────
+  {
+    name: 'hb_task_log',
+    description: 'Read the worker log file for a task.',
+    inputSchema: {
+      board: z.string().optional(),
+      task_id: z.string(),
+      tail: z.number().int().optional().describe('Bytes to read from end of log'),
+    },
+    async handler(args) {
+      const board = args.board ? String(args.board) : undefined;
+      const taskId = String(args.task_id);
+      const cliArgs = ['kanban', 'log', taskId];
+      if (board) cliArgs.splice(1, 0, '--board', board);
+      if (args.tail !== undefined) cliArgs.push('--tail', String(args.tail));
+      const data = await client.cliFallback(cliArgs);
+      return textResult(data);
+    },
+  },
+
+  {
+    name: 'hb_task_context',
+    description: 'Return the full context a worker would see (title, body, parent results, comments).',
+    inputSchema: {
+      board: z.string().optional(),
+      task_id: z.string(),
+    },
+    async handler(args) {
+      const board = args.board ? String(args.board) : undefined;
+      const taskId = String(args.task_id);
+      const cliArgs = ['kanban', 'context', taskId];
+      if (board) cliArgs.splice(1, 0, '--board', board);
+      const data = await client.cliFallback(cliArgs);
+      return textResult(data);
+    },
+  },
+
+  // ── Board lifecycle ─────────────────────────────────────────────
+  {
+    name: 'hb_init',
+    description: 'Initialize kanban.db if missing. Idempotent.',
+    inputSchema: {},
+    async handler() {
+      const data = await client.cliFallback(['kanban', 'init', '--json']);
+      return textResult(data);
+    },
+  },
+
+  {
+    name: 'hb_boards_switch',
+    description: 'Persist a board as the active default.',
+    inputSchema: {
+      board: z.string().describe('Board slug to make active'),
+    },
+    async handler(args) {
+      const board = String(args.board);
+      const data = await client.cliFallback(['kanban', 'boards', 'switch', board]);
+      return textResult(data);
+    },
+  },
+
+  {
+    name: 'hb_boards_show',
+    description: 'Show the currently-active board metadata (slug, name, path, task counts).',
+    inputSchema: {},
+    async handler() {
+      const data = await client.cliFallback(['kanban', 'boards', 'show', '--json']);
+      return textResult(data);
+    },
+  },
+
+  {
+    name: 'hb_boards_rename',
+    description: 'Change a board display name. The slug is immutable.',
+    inputSchema: {
+      board: z.string().describe('Board slug'),
+      name: z.string().describe('New display name'),
+    },
+    async handler(args) {
+      const board = String(args.board);
+      const name = String(args.name);
+      const data = await client.cliFallback(['kanban', 'boards', 'rename', board, name]);
+      return textResult(data);
+    },
+  },
+
+  {
+    name: 'hb_boards_rm',
+    description: 'Archive or hard-delete a non-default board.',
+    inputSchema: {
+      board: z.string().describe('Board slug to remove'),
+      delete_permanently: z.boolean().optional().describe('Hard-delete instead of archive'),
+    },
+    async handler(args) {
+      const board = String(args.board);
+      if (board === 'default') {
+        return errorResult('Cannot remove the default board');
+      }
+      const cliArgs = ['kanban', 'boards', 'rm', board];
+      if (args.delete_permanently) cliArgs.push('--delete');
+      const data = await client.cliFallback(cliArgs);
+      return textResult(data);
+    },
+  },
+
+  // ── Board observability ─────────────────────────────────────────
+  {
+    name: 'hb_watch_events',
+    description: 'Return a bounded snapshot of recent board events.',
+    inputSchema: {
+      board: z.string().optional(),
+      assignee: z.string().optional(),
+      tenant: z.string().optional(),
+      kinds: z.string().optional().describe('Comma-separated event kinds filter (e.g. "completed,blocked")'),
+      limit: z.number().int().optional().describe('Max events to return'),
+    },
+    async handler(args) {
+      const board = args.board ? String(args.board) : undefined;
+      const cliArgs = ['kanban', 'watch', '--json'];
+      if (board) cliArgs.splice(1, 0, '--board', board);
+      if (args.assignee) cliArgs.push('--assignee', String(args.assignee));
+      if (args.tenant) cliArgs.push('--tenant', String(args.tenant));
+      if (args.kinds) cliArgs.push('--kinds', String(args.kinds));
+      if (args.limit !== undefined) cliArgs.push('--limit', String(args.limit));
+      const data = await client.cliFallback(cliArgs);
+      return textResult(data);
+    },
+  },
+
+  {
+    name: 'hb_list_assignees',
+    description: 'List profiles on disk with per-assignee task counts.',
+    inputSchema: {
+      board: z.string().optional(),
+    },
+    async handler(args) {
+      const board = args.board ? String(args.board) : undefined;
+      const cliArgs = ['kanban', 'assignees', '--json'];
+      if (board) cliArgs.splice(1, 0, '--board', board);
+      const data = await client.cliFallback(cliArgs);
+      return textResult(data);
+    },
+  },
+
+  // ── Board maintenance ───────────────────────────────────────────
+  {
+    name: 'hb_gc',
+    description: 'Garbage-collect scratch workspaces for archived tasks and optionally prune old events and logs.',
+    inputSchema: {
+      board: z.string().optional(),
+      event_retention_days: z.number().int().optional(),
+      log_retention_days: z.number().int().optional(),
+    },
+    async handler(args) {
+      const board = args.board ? String(args.board) : undefined;
+      const cliArgs = ['kanban', 'gc', '--json'];
+      if (board) cliArgs.splice(1, 0, '--board', board);
+      if (args.event_retention_days !== undefined) cliArgs.push('--event-retention-days', String(args.event_retention_days));
+      if (args.log_retention_days !== undefined) cliArgs.push('--log-retention-days', String(args.log_retention_days));
+      const data = await client.cliFallback(cliArgs);
+      return textResult(data);
+    },
+  },
+
+  // ── Notification subscriptions ──────────────────────────────────
+  {
+    name: 'hb_notify_subscribe',
+    description: 'Subscribe a chat to a task\'s terminal events (completed, blocked, gave_up, crashed, timed_out).',
+    inputSchema: {
+      task_id: z.string(),
+      platform: z.string().describe('Messaging platform (telegram, slack, discord, etc.)'),
+      chat_id: z.string(),
+      thread_id: z.string().optional(),
+      user_id: z.string().optional(),
+    },
+    async handler(args) {
+      const taskId = String(args.task_id);
+      const cliArgs = ['kanban', 'notify-subscribe', taskId,
+        '--platform', String(args.platform),
+        '--chat-id', String(args.chat_id)];
+      if (args.thread_id) cliArgs.push('--thread-id', String(args.thread_id));
+      if (args.user_id) cliArgs.push('--user-id', String(args.user_id));
+      const data = await client.cliFallback(cliArgs);
+      return textResult(data);
+    },
+  },
+
+  {
+    name: 'hb_notify_list',
+    description: 'List active notification subscriptions, optionally filtered to a specific task.',
+    inputSchema: {
+      task_id: z.string().optional(),
+    },
+    async handler(args) {
+      const cliArgs = ['kanban', 'notify-list', '--json'];
+      if (args.task_id) cliArgs.splice(2, 0, String(args.task_id));
+      const data = await client.cliFallback(cliArgs);
+      return textResult(data);
+    },
+  },
+
+  {
+    name: 'hb_notify_unsubscribe',
+    description: 'Remove a notification subscription from a task.',
+    inputSchema: {
+      task_id: z.string(),
+      platform: z.string(),
+      chat_id: z.string(),
+      thread_id: z.string().optional(),
+    },
+    async handler(args) {
+      const taskId = String(args.task_id);
+      const cliArgs = ['kanban', 'notify-unsubscribe', taskId,
+        '--platform', String(args.platform),
+        '--chat-id', String(args.chat_id)];
+      if (args.thread_id) cliArgs.push('--thread-id', String(args.thread_id));
       const data = await client.cliFallback(cliArgs);
       return textResult(data);
     },

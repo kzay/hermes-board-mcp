@@ -25,5 +25,20 @@ This matrix maps the release MCP tool surface to the client workflow that owns i
 | `hb_tail_events` | `hb-monitor` |
 | `hb_send_heartbeat` | `hb-worker` |
 | `hb_import_spec` | `hb-deploy` |
+| `hb_edit_task` | `hb-plan` |
+| `hb_claim_task` | `hb-worker` |
+| `hb_task_log` | `hb-monitor` |
+| `hb_task_context` | `hb-monitor`, `hb-worker` |
+| `hb_init` | `hb-plan` |
+| `hb_boards_switch` | `hb-plan` |
+| `hb_boards_show` | `hb-monitor` |
+| `hb_boards_rename` | `hb-plan` |
+| `hb_boards_rm` | `hb-release` |
+| `hb_watch_events` | `hb-monitor` |
+| `hb_list_assignees` | `hb-monitor` |
+| `hb_gc` | `hb-release` |
+| `hb_notify_subscribe` | `hb-deploy` |
+| `hb_notify_list` | `hb-monitor` |
+| `hb_notify_unsubscribe` | `hb-monitor` |
 
 Release verification checks this package with `npm pack --dry-run` and ensures the canonical skill set ships without stale skill directories.

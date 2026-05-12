@@ -30,11 +30,11 @@ npx hermes-board-skills-setup
 
 | Skill | Description |
 |-------|-------------|
-| `hb-deploy` | Validate and dispatch provider-backed specs through `hb_import_spec` |
-| `hb-monitor` | Check board status and follow deployed spec work |
-| `hb-plan` | Create, organize, assign, link, specify, and dispatch board tasks |
-| `hb-worker` | Report progress, blockers, and liveness from worker tasks |
-| `hb-release` | Verify release readiness, complete tasks, and archive finished work |
+| `hb-deploy` | Validate and dispatch provider-backed specs through `hb_import_spec`, subscribe to notifications |
+| `hb-monitor` | Check board status, worker logs, task context, board events, assignees, and follow deployed spec work |
+| `hb-plan` | Initialize boards, create/edit/organize/assign/link/specify/dispatch board tasks, manage board lifecycle |
+| `hb-worker` | Claim tasks, read context, report progress/blockers/liveness, complete with structured metadata |
+| `hb-release` | Verify release readiness, bulk complete/archive tasks, garbage-collect workspaces, remove old boards |
 
 ## Configure
 

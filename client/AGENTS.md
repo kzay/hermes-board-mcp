@@ -97,12 +97,12 @@ If you get connection refused, the server is not running or the URL is wrong.
 
 ## Skill Selection
 
-- Use `hb-deploy` for provider-backed spec dispatch through `hb_import_spec`.
+- Use `hb-deploy` for provider-backed spec dispatch through `hb_import_spec` and notification subscriptions (`hb_notify_subscribe`).
   - For `openspec:` refs, read `hb-deploy/references/providers/openspec.md` before deriving or validating the change.
-- Use `hb-monitor` for board summaries and follow workflows.
-- Use `hb-plan` for task creation, assignment, links, specify, and dispatch.
-- Use `hb-worker` for comments, blockers, unblock, heartbeat, and worker completion.
-- Use `hb-release` for release checks, task completion, and archival.
+- Use `hb-monitor` for board summaries, follow workflows, worker logs (`hb_task_log`), task context (`hb_task_context`), board events (`hb_watch_events`), assignee overview (`hb_list_assignees`), and notification listing (`hb_notify_list`).
+- Use `hb-plan` for board initialization (`hb_init`), board management (`hb_boards_switch`, `hb_boards_rename`), task creation, editing (`hb_edit_task`), assignment, links, specify, and dispatch.
+- Use `hb-worker` for claiming tasks (`hb_claim_task`), reading context (`hb_task_context`), comments, blockers, unblock, heartbeat, and worker completion with structured metadata.
+- Use `hb-release` for release checks, bulk task completion/archival, workspace cleanup (`hb_gc`), board removal (`hb_boards_rm`), and final summaries.
 
 ## Troubleshoot
 

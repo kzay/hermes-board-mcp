@@ -45,6 +45,24 @@
       "user_request": "Run release checks, mark verified tasks complete, and archive finished work.",
       "expected_skill": "hb-release",
       "should_not_load": ["hb-plan", "hb-worker"]
+    },
+    {
+      "name": "edit-existing-task",
+      "user_request": "Change the title and priority of task HB-42 on the board.",
+      "expected_skill": "hb-plan",
+      "should_not_load": ["hb-deploy", "hb-worker", "hb-release"]
+    },
+    {
+      "name": "show-worker-log",
+      "user_request": "Show me the worker log for task t_abc.",
+      "expected_skill": "hb-monitor",
+      "should_not_load": ["hb-plan", "hb-worker", "hb-deploy"]
+    },
+    {
+      "name": "cleanup-old-boards",
+      "user_request": "Clean up old workspaces and archive the retired project board.",
+      "expected_skill": "hb-release",
+      "should_not_load": ["hb-plan", "hb-deploy"]
     }
   ]
 }
