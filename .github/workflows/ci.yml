@@ -19,10 +19,11 @@ jobs:
         with:
           node-version: '20'
           cache: npm
-      - run: npm ci
+          cache-dependency-path: server/package-lock.json
+      - run: npm ci --prefix server
       - run: npm test
       - run: npm run release:check
-      - run: npm audit --omit=dev
+      - run: npm audit --omit=dev --prefix server
 
   docker-e2e:
     runs-on: ubuntu-latest
@@ -33,7 +34,8 @@ jobs:
         with:
           node-version: '20'
           cache: npm
-      - run: npm ci
+          cache-dependency-path: server/package-lock.json
+      - run: npm ci --prefix server
       - run: npm run test:e2e:up
       - run: npm run test:e2e
       - if: always()
