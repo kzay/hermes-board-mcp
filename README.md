@@ -4,6 +4,7 @@
 [![npm: skills](https://img.shields.io/npm/v/@kzay/hermes-board-skills?label=skills)](https://www.npmjs.com/package/@kzay/hermes-board-skills)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![Node.js >=20](https://img.shields.io/badge/node-%3E%3D20-339933)](./server/package.json)
+[![CI](https://github.com/kzay/hermes-board-mcp/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/kzay/hermes-board-mcp/actions/workflows/ci.yml)
 
 Open-source infrastructure for running agent work through the Hermes board system.
 
