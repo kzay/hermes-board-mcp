@@ -77,7 +77,7 @@ const httpServer = http.createServer(async (req, res) => {
 
   if (req.method === 'GET' && url.pathname === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ status: 'ok', service: 'hermes-board-mcp' }));
+    res.end(JSON.stringify({ status: 'ok', service: 'hermes-board-mcp', version: pkg.version }));
     return;
   }
 

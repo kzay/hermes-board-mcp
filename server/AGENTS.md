@@ -37,6 +37,17 @@ hermes-board-mcp --version    # prints current version
 
 From source: `cd server && npm install && npm run build && node dist/src/cli.js --version`
 
+## Update
+
+```bash
+npm update -g @kzay/hermes-board-mcp
+hermes-board-mcp --version           # verify on-disk version
+systemctl restart hermes-board-mcp   # or kill/relaunch the process
+curl -sf http://127.0.0.1:7332/health | jq .version  # confirm running version matches
+```
+
+The running process serves old code until restarted. Compare `hermes-board-mcp --version` (on-disk) with `/health` `version` field (in-memory) to detect a stale process.
+
 ## Configure
 
 All config goes in a single env file:
@@ -68,7 +79,7 @@ For dashboard integration, policy customization, Caddy, and systemd, see `../REA
 ```bash
 hermes-board-mcp start --env-file /etc/hermes/hermes-board-mcp.env &
 curl -sf http://127.0.0.1:7332/health
-# Expected: {"status":"ok","service":"hermes-board-mcp"}
+# Expected: {"status":"ok","service":"hermes-board-mcp","version":"<installed-version>"}
 ```
 
 Then call `hb_health` and `hb_list_boards` to confirm kanban connectivity.
@@ -83,5 +94,6 @@ Then call `hb_health` and `hb_list_boards` to confirm kanban connectivity.
 | All kanban ops fail | Server must be co-located with Hermes agent |
 | Policy denies all tools | Add profile to `policy.yaml`, then SIGHUP or restart |
 | `hb_import_spec` rejects | Missing `base_commit` or commit not pushed to remote |
+| `/health` version stale | Process still running old code — restart after `npm update -g` |
 
 Client skills (`@kzay/hermes-board-skills`): see `../client/AGENTS.md`. Generate a starter config: `hermes-board-mcp init > hermes-board-mcp.json`
