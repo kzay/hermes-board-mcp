@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.5.2 - 2026-05-17
+
+- **hb-plan**: Apply `defaults` from `hermes-board.json` when creating tasks; require an assignee (config or explicit).
+- **hb-deploy**: Use `defaults.assignee` and `defaults.workspace` for `hb_import_spec`; workspace selection is config-driven (no remote filesystem checks); clarify missing-config fallback.
+
 ## 3.5.0 - 2026-05-12
 
 - Added `speckit:` provider guidance for `hb-deploy`.

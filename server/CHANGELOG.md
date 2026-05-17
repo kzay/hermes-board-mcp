@@ -1,5 +1,17 @@
 # Changelog
 
+## 3.5.2 - 2026-05-17
+
+### Fixed
+- `hb_create_task`: CLI fallback now passes repeatable `--skill <name>` instead of unsupported `--skills` on `kanban create`.
+- `hb_task_log` / tail: REST uses `/tasks/:id/events`; CLI omits unsupported `--json` / `--lines` on `kanban tail`.
+- Removed `--json` from CLI-only subcommands where the installed Hermes CLI does not support it (`heartbeat`, `claim`, `init`, `boards show`, `watch`, `gc`, `link`, `unlink`).
+- `hb_watch_events`: schema uses `interval` to match CLI (replaces non-existent `--limit`).
+- `hb_link_tasks` / `hb_unlink_tasks`: drop `--json` from CLI args.
+
+### Documentation
+- Skills (`hb-plan`, `hb-deploy`): apply `hermes-board.json` defaults for task creation and spec dispatch; config-driven workspace for `hb_import_spec` (no VPS path probing).
+
 ## 3.5.0 - 2026-05-12
 
 ### Added

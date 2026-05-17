@@ -30,7 +30,9 @@ If the user provides any other prefix, stop before task creation and report the 
    - Prefer explicit user values over env vars, env vars over config, config over derived repo slug.
    - Use `project.slug` as the default `project`, `project.board` as the default `board`, and `repo.url` or a matching alias as the optional `repo` argument.
    - Read the provider-specific root if configured (e.g. `openspec.root`, `speckit.root`) to pass as `spec_base_path`.
-   - If the file is absent, derive a likely project slug from `git remote get-url origin` and use it. Only ask if there is genuine ambiguity (multiple remotes, no remote).
+   - Use `defaults.assignee` as the default `assignee` for `hb_import_spec` when the user does not provide one explicitly.
+   - Use `defaults.workspace` as the default `workspace` for `hb_import_spec` when the user does not provide one explicitly.
+   - If the file is absent, derive a likely project slug from `git remote get-url origin` and ask before relying on it.
 1. **Resolve the spec reference**.
    - If the user supplied a provider-prefixed reference, validate the prefix before continuing.
    - If the user named a provider without a full ref, load that provider reference and derive the `spec_ref`.
@@ -47,7 +49,10 @@ If the user provides any other prefix, stop before task creation and report the 
    - Verify `base_commit` is reachable from a remote branch.
    - If not reachable, report the blocker concisely: `"HEAD is not pushed. Run git push, then re-run /hb-deploy <name>."` — stop.
    - Do not ask the user for an alternative ref unless they explicitly said to use a different commit.
-4. **Dispatch through MCP** - call `hb_import_spec` with:
+4. **Select workspace mode**.
+   - If `defaults.workspace` was read from `hermes-board.json` in Step 0 and the user did not override it, use that value.
+   - If neither the user nor the config specifies a workspace, default to `"scratch"`. Note to the user that `scratch` may not provision a repo checkout for release-stage tasks.
+5. **Dispatch through MCP** - call `hb_import_spec` with:
    - `spec_ref`
    - `project` or `repo`
    - `base_branch`
@@ -55,7 +60,7 @@ If the user provides any other prefix, stop before task creation and report the 
    - Optional: `board`, `assignee`, `workspace`, `skills`, `allowed_paths`, `spec_base_path`
 
    Do not build a local task array for `hb_import_spec`. The server resolves the provider from `spec_ref`, creates one orchestration task, and embeds the portable checkout context for the worker.
-5. **Report**.
+6. **Report**.
    - Show the created task, idempotency key if returned, provider prefix, branch, commit, and board/project used.
    - Remind the user if a push is still needed for workers to fetch the commit.
 

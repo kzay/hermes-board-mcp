@@ -21,7 +21,8 @@ This is a monorepo for the Hermes board system. For deployment/usage instruction
 - TypeScript `strict` mode, `module: NodeNext`
 - Use Zod for tool input schemas
 - Use `HermesKanbanClient` for hybrid REST+CLI transport
-- Native Hermes routing fields (`assignee`, `workspace`, `skills`) use CLI flags / REST payload; OpenSpec metadata is fenced in the body
+- Native Hermes routing fields (`assignee`, `workspace`, `skills`) use CLI flags / REST payload; `skills` maps to repeatable `--skill <name>` on `kanban create`; OpenSpec metadata is fenced in the body
+- Only pass `--json` to CLI sub-commands that document it (`list`, `show`, `create`, `comment`, `update`); CLI-only commands (`heartbeat`, `claim`, `init`, `gc`, `link`, `unlink`, `watch`) do **not** support `--json`
 - Write tests with `node:test` against compiled `server/dist/test/`
 
 ## Repository Structure

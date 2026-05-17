@@ -87,7 +87,7 @@ curl http://127.0.0.1:7332/health
 Expected response:
 
 ```json
-{"status":"ok","service":"hermes-board-mcp"}
+{"status":"ok","service":"hermes-board-mcp","version":"<installed-version>"}
 ```
 
 ### 5. Call a Tool

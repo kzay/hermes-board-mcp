@@ -13,14 +13,15 @@ Use when the user wants to create board tasks, triage work, assign owners, link 
 
 ## Steps
 
-0. **Read client config** - read `hermes-board.json` from the repo root and use `project.board` as the default board.
+0. **Read client config** - read `hermes-board.json` from the repo root. Use `project.board` as the default board. Cache the full `defaults` block for use in subsequent steps.
 1. **Initialize if needed** - call `hb_init` to ensure `kanban.db` exists (idempotent).
 2. **Verify board** - call `hb_list_boards`; create a missing board with `hb_create_board` only when the user asks for it.
    - **Manage boards** - use `hb_boards_switch` to change the active board, `hb_boards_rename` to update a display name, `hb_boards_rm` to archive or delete a non-default board.
 3. **Create tasks** - call `hb_create_task` with native Hermes fields:
    - `board`, `title`, optional `body`
-   - Optional routing: `assignee`, `workspace`, `skills`, `priority`, `tenant`, `max_runtime`
-   - Optional metadata: `spec_ref`, `acceptance_criteria`, `test_command`, `human_gate_required`
+   - Routing: `assignee`, `workspace`, `skills`, `priority`, `tenant`, `max_runtime`
+   - Metadata: `spec_ref`, `acceptance_criteria`, `test_command`, `human_gate_required`
+   - **Default application**: if the user does not specify `assignee`, `workspace`, `priority`, `tenant`, or `max_runtime`, apply the corresponding value from `hermes-board.json` → `defaults`. At minimum, `assignee` MUST always be set — never create a task without an assignee. If `hermes-board.json` is missing or has no `defaults.assignee`, ask the user for an assignee before creating the task.
 4. **Edit existing tasks** - call `hb_edit_task` to update title, body, priority, or result on existing tasks.
 5. **Organize dependencies** - use `hb_link_tasks` and `hb_unlink_tasks`.
 6. **Assign or adjust work** - use `hb_assign_task`, `hb_block_task`, `hb_unblock_task`, and `hb_add_comment`.

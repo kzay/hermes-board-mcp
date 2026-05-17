@@ -136,6 +136,58 @@ interface KanbanCreateArgs {
   human_gate_required?: string;
 }
 
+/** Build the REST body for kanban create. Exported for testing. */
+export function buildCreateRestBody(args: KanbanCreateArgs, fullBody: string): Record<string, unknown> {
+  const restBody: Record<string, unknown> = { title: args.title };
+  if (fullBody) restBody.body = fullBody;
+  if (args.triage !== undefined) restBody.triage = args.triage;
+  if (args.parents !== undefined && args.parents.length) restBody.parents = args.parents;
+  if (args.assignee !== undefined) restBody.assignee = args.assignee;
+  if (args.tenant !== undefined) restBody.tenant = args.tenant;
+  if (args.priority !== undefined) restBody.priority = args.priority;
+  if (args.workspace !== undefined) restBody.workspace = args.workspace;
+  if (args.idempotency_key !== undefined) restBody.idempotency_key = args.idempotency_key;
+  if (args.max_runtime !== undefined) restBody.max_runtime = args.max_runtime;
+  if (args.skills !== undefined && args.skills.length) restBody.skills = args.skills;
+  return restBody;
+}
+
+/**
+ * Build the CLI args array for `hermes kanban create`.
+ * `--skill` (singular, repeatable) is the CLI flag for per-task skills.
+ * The top-level `hermes --skills` is a session-level flag — do NOT use it here.
+ * Exported for testing.
+ */
+export function buildCreateCliArgs(args: KanbanCreateArgs, fullBody: string): string[] {
+  const cliArgs = ['kanban', '--board', args.board, 'create', args.title];
+  if (fullBody) cliArgs.push('--body', fullBody);
+  if (args.assignee !== undefined) cliArgs.push('--assignee', args.assignee);
+  if (args.tenant !== undefined) cliArgs.push('--tenant', args.tenant);
+  if (args.priority !== undefined) cliArgs.push('--priority', String(args.priority));
+  if (args.workspace !== undefined) cliArgs.push('--workspace', args.workspace);
+  if (args.triage) cliArgs.push('--triage');
+  if (args.idempotency_key !== undefined) cliArgs.push('--idempotency-key', args.idempotency_key);
+  if (args.max_runtime !== undefined) cliArgs.push('--max-runtime', args.max_runtime);
+  if (args.skills !== undefined && args.skills.length) {
+    for (const skill of args.skills) cliArgs.push('--skill', skill);
+  }
+  cliArgs.push('--json');
+  return cliArgs;
+}
+
+/**
+ * Build the CLI args array for `hermes kanban tail`.
+ * `--json` and `--lines` are intentionally excluded: the installed hermes CLI
+ * does not support them on the `kanban tail` sub-command.  The `lines` param
+ * is forwarded via REST only.  Exported for testing.
+ */
+export function buildTailCliArgs(args: { board?: string; task_id: string }): string[] {
+  const cliArgs = ['kanban'];
+  if (args.board) cliArgs.push('--board', args.board);
+  cliArgs.push('tail', args.task_id);
+  return cliArgs;
+}
+
 async function kanbanCreateCore(args: KanbanCreateArgs): Promise<ReturnType<typeof textResult>> {
   const board = args.board;
   const title = args.title;
@@ -149,31 +201,10 @@ async function kanbanCreateCore(args: KanbanCreateArgs): Promise<ReturnType<type
   const baseBody = args.body || '';
   const fullBody = baseBody && metaBlock ? `${baseBody}\n\n${metaBlock}` : baseBody || metaBlock || '';
 
-  const restBody: Record<string, unknown> = { title };
-  if (fullBody) restBody.body = fullBody;
-  if (args.triage !== undefined) restBody.triage = args.triage;
-  if (args.parents !== undefined && args.parents.length) restBody.parents = args.parents;
-  if (args.assignee !== undefined) restBody.assignee = args.assignee;
-  if (args.tenant !== undefined) restBody.tenant = args.tenant;
-  if (args.priority !== undefined) restBody.priority = args.priority;
-  if (args.workspace !== undefined) restBody.workspace = args.workspace;
-  if (args.idempotency_key !== undefined) restBody.idempotency_key = args.idempotency_key;
-  if (args.max_runtime !== undefined) restBody.max_runtime = args.max_runtime;
-  if (args.skills !== undefined && args.skills.length) restBody.skills = args.skills;
-
+  const restBody = buildCreateRestBody(args, fullBody);
   const restPromise = () => client.tryRest('POST', '/tasks', restBody, { board });
 
-  const cliArgs = ['kanban', '--board', board, 'create', title];
-  if (fullBody) cliArgs.push('--body', fullBody);
-  if (args.assignee !== undefined) cliArgs.push('--assignee', args.assignee);
-  if (args.tenant !== undefined) cliArgs.push('--tenant', args.tenant);
-  if (args.priority !== undefined) cliArgs.push('--priority', String(args.priority));
-  if (args.workspace !== undefined) cliArgs.push('--workspace', args.workspace);
-  if (args.triage) cliArgs.push('--triage');
-  if (args.idempotency_key !== undefined) cliArgs.push('--idempotency-key', args.idempotency_key);
-  if (args.max_runtime !== undefined) cliArgs.push('--max-runtime', args.max_runtime);
-  if (args.skills !== undefined && args.skills.length) cliArgs.push('--skills', args.skills.join(','));
-  cliArgs.push('--json');
+  const cliArgs = buildCreateCliArgs(args, fullBody);
   const cliPromise = () => client.cliFallback(cliArgs);
 
   const result = await tryRestThenCli(restPromise, cliPromise);
@@ -327,7 +358,7 @@ export const toolDefs: ToolDef[] = [
       triage: z.boolean().optional(),
       idempotency_key: z.string().optional(),
       max_runtime: z.string().optional(),
-      skills: z.array(z.string()).optional(),
+      skills: z.array(z.string()).optional().describe('Skill hints for the worker (forwarded via REST only; ignored by CLI)'),
       spec_ref: z.string().optional(),
       acceptance_criteria: z.string().optional(),
       test_command: z.string().optional(),
@@ -536,7 +567,7 @@ export const toolDefs: ToolDef[] = [
       if (board) restBody.board = board;
 
       const restPromise = () => client.tryRest('POST', '/links', restBody);
-      const cliArgs = ['kanban', 'link', parentId, childId, '--json'];
+      const cliArgs = ['kanban', 'link', parentId, childId];
       if (board) cliArgs.splice(1, 0, '--board', board);
       const cliPromise = () => client.cliFallback(cliArgs);
 
@@ -562,7 +593,7 @@ export const toolDefs: ToolDef[] = [
       if (board) query.board = board;
 
       const restPromise = () => client.tryRest('DELETE', '/links', undefined, query);
-      const cliArgs = ['kanban', 'unlink', parentId, childId, '--json'];
+      const cliArgs = ['kanban', 'unlink', parentId, childId];
       if (board) cliArgs.splice(1, 0, '--board', board);
       const cliPromise = () => client.cliFallback(cliArgs);
 
@@ -674,7 +705,7 @@ export const toolDefs: ToolDef[] = [
     inputSchema: {
       board: z.string().optional(),
       task_id: z.string(),
-      lines: z.number().int().optional().describe('Max lines to return'),
+      lines: z.number().int().optional().describe('Max lines to return (REST only; CLI returns default tail)'),
     },
     async handler(args) {
       const board = args.board ? String(args.board) : undefined;
@@ -685,10 +716,8 @@ export const toolDefs: ToolDef[] = [
       if (board) query.board = board;
       if (lines !== undefined) query.lines = lines;
 
-      const restPromise = () => client.tryRest('GET', `/tasks/${taskId}`, undefined, query);
-      const cliArgs = ['kanban', 'tail', taskId, '--json'];
-      if (board) cliArgs.splice(1, 0, '--board', board);
-      if (lines !== undefined) cliArgs.push('--lines', String(lines));
+      const restPromise = () => client.tryRest('GET', `/tasks/${taskId}/events`, undefined, query);
+      const cliArgs = buildTailCliArgs({ board, task_id: taskId });
       const cliPromise = () => client.cliFallback(cliArgs);
 
       const data = await tryRestThenCli(restPromise, cliPromise);
@@ -709,7 +738,7 @@ export const toolDefs: ToolDef[] = [
       const taskId = String(args.task_id);
       const note = args.note ? String(args.note) : undefined;
 
-      const cliArgs = ['kanban', '--board', board, 'heartbeat', taskId, '--json'];
+      const cliArgs = ['kanban', '--board', board, 'heartbeat', taskId];
       if (note) cliArgs.push('--note', note);
       const data = await client.cliFallback(cliArgs);
       return textResult(data);
@@ -763,7 +792,7 @@ export const toolDefs: ToolDef[] = [
     async handler(args) {
       const board = args.board ? String(args.board) : undefined;
       const taskId = String(args.task_id);
-      const cliArgs = ['kanban', 'claim', taskId, '--json'];
+      const cliArgs = ['kanban', 'claim', taskId];
       if (board) cliArgs.splice(1, 0, '--board', board);
       if (args.ttl !== undefined) cliArgs.push('--ttl', String(args.ttl));
       const data = await client.cliFallback(cliArgs);
@@ -814,7 +843,7 @@ export const toolDefs: ToolDef[] = [
     description: 'Initialize kanban.db if missing. Idempotent.',
     inputSchema: {},
     async handler() {
-      const data = await client.cliFallback(['kanban', 'init', '--json']);
+      const data = await client.cliFallback(['kanban', 'init']);
       return textResult(data);
     },
   },
@@ -837,7 +866,7 @@ export const toolDefs: ToolDef[] = [
     description: 'Show the currently-active board metadata (slug, name, path, task counts).',
     inputSchema: {},
     async handler() {
-      const data = await client.cliFallback(['kanban', 'boards', 'show', '--json']);
+      const data = await client.cliFallback(['kanban', 'boards', 'show']);
       return textResult(data);
     },
   },
@@ -885,16 +914,16 @@ export const toolDefs: ToolDef[] = [
       assignee: z.string().optional(),
       tenant: z.string().optional(),
       kinds: z.string().optional().describe('Comma-separated event kinds filter (e.g. "completed,blocked")'),
-      limit: z.number().int().optional().describe('Max events to return'),
+      interval: z.number().int().optional().describe('Polling interval in seconds'),
     },
     async handler(args) {
       const board = args.board ? String(args.board) : undefined;
-      const cliArgs = ['kanban', 'watch', '--json'];
+      const cliArgs = ['kanban', 'watch'];
       if (board) cliArgs.splice(1, 0, '--board', board);
       if (args.assignee) cliArgs.push('--assignee', String(args.assignee));
       if (args.tenant) cliArgs.push('--tenant', String(args.tenant));
       if (args.kinds) cliArgs.push('--kinds', String(args.kinds));
-      if (args.limit !== undefined) cliArgs.push('--limit', String(args.limit));
+      if (args.interval !== undefined) cliArgs.push('--interval', String(args.interval));
       const data = await client.cliFallback(cliArgs);
       return textResult(data);
     },
@@ -926,7 +955,7 @@ export const toolDefs: ToolDef[] = [
     },
     async handler(args) {
       const board = args.board ? String(args.board) : undefined;
-      const cliArgs = ['kanban', 'gc', '--json'];
+      const cliArgs = ['kanban', 'gc'];
       if (board) cliArgs.splice(1, 0, '--board', board);
       if (args.event_retention_days !== undefined) cliArgs.push('--event-retention-days', String(args.event_retention_days));
       if (args.log_retention_days !== undefined) cliArgs.push('--log-retention-days', String(args.log_retention_days));
@@ -1008,7 +1037,7 @@ export const toolDefs: ToolDef[] = [
       base_branch: z.string().optional().describe('Git branch name (defaults to project default_branch)'),
       assignee: z.string().optional(),
       workspace: z.union([z.literal('scratch'), z.literal('worktree'), z.string().regex(/^dir:/)]).optional(),
-      skills: z.array(z.string()).optional(),
+      skills: z.array(z.string()).optional().describe('Skill hints for the worker (forwarded via REST only; ignored by CLI)'),
       allowed_paths: z.array(z.string()).optional().describe('Paths the worker is allowed to modify'),
       spec_base_path: z.string().optional().describe('Override the provider default root directory (e.g. "openspec/" or "speckit/")'),
     },
